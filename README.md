@@ -11,7 +11,9 @@ This plugin will process data for europa
 ```
 filter {
   europafilter {
-  	threads => 10
+  	metadata => ["test-input=value"]
+	nlpBin => "/full_path/ner-custom-model.bin"
+	extractContent => true
   }
 }
 ```
