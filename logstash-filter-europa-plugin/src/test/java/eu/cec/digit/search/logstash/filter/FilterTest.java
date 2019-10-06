@@ -27,7 +27,7 @@ public class FilterTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(FilterTest.class);
 
 	@Test
-	public void filterMetadataTest() {
+	public void filterMetadataTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 		configValues.put(EuropaFilter.METADATA, Arrays.asList("SOURCE=AUDIOVISUAL-EC-EUROPA-EU", "SITENAME=Audiovisual Service", "SITEDESCRIPTION=European Commission Audiovisual Portal"));
@@ -81,7 +81,7 @@ public class FilterTest {
 
 	@Ignore
 	@Test
-	public void filterJsonTest() {
+	public void filterJsonTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 		Configuration config = new ConfigurationImpl(configValues);
@@ -130,7 +130,7 @@ public class FilterTest {
 
 	@Ignore
 	@Test
-	public void filterHtmlTest() {
+	public void filterHtmlTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 		Configuration config = new ConfigurationImpl(configValues);
