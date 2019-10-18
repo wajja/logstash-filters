@@ -2,21 +2,17 @@ package eu.cec.digit.search.logstash.filter;
 
 public class DetectedEntity {
 
+	private String entity;
+	private String value;
+
 	public DetectedEntity() {
 
 	}
 
 	public DetectedEntity(String entity, String value) {
-
 		this.entity = entity;
-
 		this.value = value;
-
 	}
-
-	private String entity;
-
-	private String value;
 
 	public String getEntity() {
 

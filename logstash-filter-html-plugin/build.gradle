@@ -10,15 +10,15 @@ apply plugin: "eclipse"
 // ===========================================================================
 group                      'eu.cec.digit.search.logstash.filter' // must match the package of the main plugin class
 version                    "${file("VERSION").text.trim()}" // read from required VERSION file
-description                = "Logstash Europa Filter"
+description                = "Logstash HTML Filter"
 pluginInfo.licenses        = ['Apache-2.0'] // list of SPDX license IDs
 pluginInfo.longDescription = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using \$LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
 pluginInfo.authors         = ['Mahy Tom']
 pluginInfo.email           = ['mail@tommahy.com']
 pluginInfo.homepage        = "http://#"
 pluginInfo.pluginType      = "filter"
-pluginInfo.pluginClass     = "EuropaFilter"
-pluginInfo.pluginName      = "europafilter" // must match the @LogstashPlugin annotation in the main plugin class
+pluginInfo.pluginClass     = "HtmlFilter"
+pluginInfo.pluginName      = "htmlfilter" // must match the @LogstashPlugin annotation in the main plugin class
 // ===========================================================================
 
 sourceCompatibility = 1.8

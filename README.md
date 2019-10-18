@@ -1,16 +1,16 @@
-# Logstash Europa Processor
+# Logstash HTML Processor
 
-This plugin will preprocess the Europa Data before sending to the logstash Output
+This plugin will preprocess the HTML Data before sending to the logstash Output
 
-## Europa Plugin
+## HTML Plugin
 
-This plugin will process data for europa
+This plugin will process data for html
 
 ### Configuration
 
 ```
 filter {
-  europafilter {
+  htmlfilter {
   	metadata => ["test-input=value"]
 	nlpBin => "/full_path/ner-custom-model.bin"
 	extractContent => true
@@ -44,7 +44,7 @@ gradlew.bat gem
 
 Install in logstash
 
-/logstash-7.2.0/bin/logstash-plugin.bat install --no-verify --local /logstash-filter-europa-plugin/logstash-input-europafilter-1.0.0.gem
+/logstash-7.2.0/bin/logstash-plugin.bat install --no-verify --local /logstash-filter-html-plugin/logstash-input-htmlfilter-1.0.0.gem
 
 In logstash conf you can configure the tool
 
