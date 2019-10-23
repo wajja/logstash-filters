@@ -1,22 +1,20 @@
 package eu.cec.digit.search.logstash.filter;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 import org.apache.tika.Tika;
@@ -39,8 +37,6 @@ import co.elastic.logstash.api.Filter;
 import co.elastic.logstash.api.FilterMatchListener;
 import co.elastic.logstash.api.LogstashPlugin;
 import co.elastic.logstash.api.PluginConfigSpec;
-import opennlp.tools.namefind.NameFinderME;
-import opennlp.tools.namefind.TokenNameFinderModel;
 
 /**
  * Simple tool to fetch http content and send it to logstash
@@ -54,6 +50,8 @@ public class HtmlFilter implements Filter {
 	private static final Logger LOGGER = LoggerFactory.getLogger(HtmlFilter.class);
 
 	protected static final String METADATA_TITLE = "TITLE";
+	protected static final String METADATA_DATE = "DATE";
+	protected static final String METADATA_CONTENT_TYPE = "CONTENT-TYPE";
 	protected static final String METADATA_URL = "url";
 	protected static final String METADATA_CONTEXT = "context";
 	protected static final String METADATA_CONTENT = "content";
@@ -66,34 +64,35 @@ public class HtmlFilter implements Filter {
 	protected static final String METADATA_ACL_NO_GROUPS = "aclNoGroups";
 
 	protected static final String PROPERTY_METADATA = "metadata";
-	protected static final String PROPERTY_OPEN_NLP_BIN = "nlpBin";
 	protected static final String PROPERTY_EXPORT_CONTENT = "exportContent";
 	protected static final String PROPERTY_EXTRACT_CONTENT = "extractContent";
 	protected static final String PROPERTY_EXTRACT_TITLE_CSS = "extractTitleCss";
 	protected static final String PROPERTY_EXTRACT_BODY_CSS = "extractBodyCss";
 	protected static final String PROPERTY_DATA_FOLDER = "dataFolder";
+	protected static final String PROPERTY_DEFAULT_TITLE = "defaultTitle";
+	protected static final String PROPERTY_REMOVE_CONTENT = "removeContent";
 
 	public static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
+	public static final PluginConfigSpec<String> CONFIG_DEFAULT_TITLE = PluginConfigSpec.stringSetting(PROPERTY_DEFAULT_TITLE, "Home");
 	public static final PluginConfigSpec<List<Object>> CONFIG_METADATA = PluginConfigSpec.arraySetting(PROPERTY_METADATA);
-	public static final PluginConfigSpec<String> CONFIG_OPEN_NLP = PluginConfigSpec.stringSetting(PROPERTY_OPEN_NLP_BIN);
 	public static final PluginConfigSpec<Boolean> CONFIG_EXPORT_CONTENT = PluginConfigSpec.booleanSetting(PROPERTY_EXPORT_CONTENT, false);
 	public static final PluginConfigSpec<Boolean> CONFIG_EXTRACT_CONTENT = PluginConfigSpec.booleanSetting(PROPERTY_EXTRACT_CONTENT, false);
 	public static final PluginConfigSpec<List<Object>> CONFIG_EXTRACT_TITLE_CSS = PluginConfigSpec.arraySetting(PROPERTY_EXTRACT_TITLE_CSS, new ArrayList<>(), false, false);
 	public static final PluginConfigSpec<List<Object>> CONFIG_EXTRACT_BODY_CSS = PluginConfigSpec.arraySetting(PROPERTY_EXTRACT_BODY_CSS, new ArrayList<>(), false, false);
+	public static final PluginConfigSpec<List<Object>> CONFIG_REMOVE_CONTENT = PluginConfigSpec.arraySetting(PROPERTY_REMOVE_CONTENT, new ArrayList<>(), false, false);
 
 	private final Tika tika = new Tika();
-	private final CountDownLatch done = new CountDownLatch(1);
-	private volatile boolean stopped;
-	private NameFinderME finder;
 	private LanguageDetector detector;
 	private String threadId;
 
 	private String dataFolder;
+	private String defaultTitle;
 	private Map<String, List<String>> metadataMap = new HashMap<>();
 	private Boolean extractContent;
 	private Boolean exportContent;
 	private List<String> titleCss;
 	private List<String> bodyCss;
+	private List<String> removeContent;
 
 	/**
 	 * Mandatory constructor
@@ -103,7 +102,11 @@ public class HtmlFilter implements Filter {
 	 * @param context
 	 * @throws IOException
 	 */
-	public HtmlFilter(String id, Configuration config, Context context) throws IOException {
+	public HtmlFilter(String id, Configuration config, Context context) {
+
+		if (context != null && LOGGER.isDebugEnabled()) {
+			LOGGER.debug(context.toString());
+		}
 
 		this.threadId = id;
 
@@ -116,18 +119,14 @@ public class HtmlFilter implements Filter {
 			});
 		}
 
-		if (config.get(CONFIG_OPEN_NLP) != null) {
-			InputStream is = new FileInputStream(new File(config.get(CONFIG_OPEN_NLP)));
-			finder = new NameFinderME(new TokenNameFinderModel(is));
-		}
-
 		this.extractContent = config.get(CONFIG_EXTRACT_CONTENT);
 		this.exportContent = config.get(CONFIG_EXPORT_CONTENT);
-		this.titleCss = config.get(CONFIG_EXTRACT_TITLE_CSS).stream().map(c -> c.toString()).collect(Collectors.toList());
-		this.bodyCss = config.get(CONFIG_EXTRACT_BODY_CSS).stream().map(c -> c.toString()).collect(Collectors.toList());
+		this.titleCss = config.get(CONFIG_EXTRACT_TITLE_CSS).stream().map(Object::toString).collect(Collectors.toList());
+		this.bodyCss = config.get(CONFIG_EXTRACT_BODY_CSS).stream().map(Object::toString).collect(Collectors.toList());
 		this.dataFolder = config.get(CONFIG_DATA_FOLDER);
-
+		this.defaultTitle = config.get(CONFIG_DEFAULT_TITLE);
 		this.detector = new OptimaizeLangDetector().loadModels();
+		this.removeContent = config.get(CONFIG_REMOVE_CONTENT).stream().map(Object::toString).collect(Collectors.toList());
 	}
 
 	/**
@@ -135,7 +134,7 @@ public class HtmlFilter implements Filter {
 	 */
 	@Override
 	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_METADATA, CONFIG_OPEN_NLP, CONFIG_EXTRACT_CONTENT, CONFIG_DATA_FOLDER, CONFIG_EXPORT_CONTENT, CONFIG_EXTRACT_BODY_CSS, CONFIG_EXTRACT_TITLE_CSS);
+		return Arrays.asList(CONFIG_METADATA, CONFIG_EXTRACT_CONTENT, CONFIG_DATA_FOLDER, CONFIG_EXPORT_CONTENT, CONFIG_EXTRACT_BODY_CSS, CONFIG_EXTRACT_TITLE_CSS, CONFIG_DEFAULT_TITLE, CONFIG_REMOVE_CONTENT);
 	}
 
 	@Override
@@ -160,13 +159,13 @@ public class HtmlFilter implements Filter {
 				 */
 
 				String type;
-				if (!eventData.containsKey(METADATA_TYPE)) {
 
-					type = tika.detect(bytes);
-					eventData.put(METADATA_TYPE, type);
+				if (eventData.containsKey(METADATA_TYPE)) {
+					type = ((RubyString) eventData.get(METADATA_TYPE)).toString();
 
 				} else {
-					type = ((RubyString) eventData.get(METADATA_TYPE)).toString();
+					type = tika.detect(bytes);
+					eventData.put(METADATA_TYPE, type);
 				}
 
 				// Only parse HTML here
@@ -183,17 +182,14 @@ public class HtmlFilter implements Filter {
 
 						if (extractContent) {
 
-							String rawContent = null;
-							String newTitle = null;
-
 							Document document = Jsoup.parse(new String(bytes));
 
-							newTitle = extractContent(this.titleCss, document, "blue");
+							String newTitle = extractContent(this.titleCss, document, "blue");
 							newContent = extractContent(this.bodyCss, document, "red");
 
-							rawContent = document.toString();
-
 							if (this.exportContent && this.dataFolder != null) {
+
+								String rawContent = document.toString();
 
 								String context = ((RubyString) eventData.get(METADATA_CONTEXT)).toString();
 								String exportFolder = new StringBuilder(this.dataFolder).append("/data-export/").append(Base64.getEncoder().encodeToString(context.getBytes())).append("/").toString();
@@ -215,8 +211,12 @@ public class HtmlFilter implements Filter {
 
 							}
 
+							for (String removeText : removeContent) {
+								newContent = newContent.replace(removeText, " ");
+							}
+
 							eventData.put(METADATA_TITLE, newTitle);
-							eventData.put(METADATA_CONTENT, newContent);
+							eventData.put(METADATA_CONTENT, Base64.getEncoder().encodeToString(newContent.getBytes()));
 
 						} else {
 
@@ -239,15 +239,29 @@ public class HtmlFilter implements Filter {
 							}
 						}
 
-//					List<DetectedEntity> entities = getEntities(newContent);
-//					entities.stream().forEach(e -> eventData.put(e.getEntity(), e.getValue()));
-
 					} catch (IOException | TikaException e) {
 						LOGGER.error("Failed to extract content from file", e);
 					}
 
+					String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(new Date());
+					metadataMap.put(METADATA_DATE, Arrays.asList(date));
+					metadataMap.put(METADATA_CONTENT_TYPE, Arrays.asList(type));
+					
 					if (!metadataMap.isEmpty()) {
 						eventData.put(PROPERTY_METADATA, metadataMap);
+					}
+
+					if (eventData.get(METADATA_TITLE) == null || eventData.get(METADATA_TITLE).toString().isEmpty()) {
+
+						String url = eventData.get(METADATA_URL).toString();
+						String newTitle = url.substring(url.lastIndexOf('/') + 1);
+
+						if (newTitle.isEmpty()) {
+							eventData.put(METADATA_TITLE, defaultTitle);
+						} else {
+							eventData.put(METADATA_TITLE, newTitle);
+						}
+
 					}
 
 					if (!eventData.containsKey(METADATA_ACL_USERS)) {
@@ -270,8 +284,10 @@ public class HtmlFilter implements Filter {
 						eventData.put(METADATA_LANGUAGES, new ArrayList<>());
 					}
 
+				
 				}
 
+				eventData.put(METADATA_CONTENT_TYPE, type);
 			}
 
 		});
@@ -301,25 +317,5 @@ public class HtmlFilter implements Filter {
 
 		return Jsoup.clean(document.toString(), Whitelist.basic());
 	}
-
-//	public List<DetectedEntity> getEntities(String source) throws IOException {
-//
-//		List<DetectedEntity> detectedEntities = new ArrayList<>();
-//
-//		if (finder != null) {
-//
-//			String[] whitespaceTokenizerLine = WhitespaceTokenizer.INSTANCE.tokenize(source);
-//			Span[] spans = finder.find(whitespaceTokenizerLine);
-//			String[] strings = Span.spansToStrings(spans, whitespaceTokenizerLine);
-//
-//			for (int i = 0; i < spans.length; i++) {
-//				detectedEntities.add(new DetectedEntity(spans[i].getType(), strings[i]));
-//			}
-//
-//		}
-//
-//		return detectedEntities;
-//
-//	}
 
 }
