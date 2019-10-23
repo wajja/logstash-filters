@@ -151,7 +151,7 @@ public class HtmlFilter implements Filter {
 
 			if (eventData.containsKey(METADATA_URL) && eventData.containsKey(METADATA_CONTENT)) {
 
-				String contentString = ((RubyString) eventData.get(METADATA_CONTENT)).toString();
+				String contentString = eventData.get(METADATA_CONTENT).toString();
 				byte[] bytes = Base64.getDecoder().decode(contentString);
 
 				/**
@@ -161,7 +161,7 @@ public class HtmlFilter implements Filter {
 				String type;
 
 				if (eventData.containsKey(METADATA_TYPE)) {
-					type = ((RubyString) eventData.get(METADATA_TYPE)).toString();
+					type = eventData.get(METADATA_TYPE).toString();
 
 				} else {
 					type = tika.detect(bytes);
@@ -246,7 +246,7 @@ public class HtmlFilter implements Filter {
 					String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(new Date());
 					metadataMap.put(METADATA_DATE, Arrays.asList(date));
 					metadataMap.put(METADATA_CONTENT_TYPE, Arrays.asList(type));
-					
+
 					if (!metadataMap.isEmpty()) {
 						eventData.put(PROPERTY_METADATA, metadataMap);
 					}
@@ -284,7 +284,6 @@ public class HtmlFilter implements Filter {
 						eventData.put(METADATA_LANGUAGES, new ArrayList<>());
 					}
 
-				
 				}
 
 				eventData.put(METADATA_CONTENT_TYPE, type);

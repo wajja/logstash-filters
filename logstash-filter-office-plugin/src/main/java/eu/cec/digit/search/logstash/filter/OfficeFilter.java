@@ -1,15 +1,28 @@
 package eu.cec.digit.search.logstash.filter;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.tika.Tika;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.langdetect.OptimaizeLangDetector;
+import org.apache.tika.language.detect.LanguageDetector;
+import org.apache.tika.language.detect.LanguageResult;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.AutoDetectParser;
+import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
+import org.apache.tika.sax.BodyContentHandler;
 import org.jruby.RubyString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
 import co.elastic.logstash.api.Configuration;
 import co.elastic.logstash.api.Context;
@@ -33,16 +46,24 @@ public class OfficeFilter implements Filter {
 	private final Tika tika = new Tika();
 
 	private static final String PROPERTY_DATA_FOLDER = "dataFolder";
+	private static final String PROPERTY_METADATA = "metadata";
 	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
+	public static final PluginConfigSpec<List<Object>> CONFIG_METADATA = PluginConfigSpec.arraySetting(PROPERTY_METADATA);
+
+	private static final String METADATA_TITLE = "TITLE";
+	private static final String METADATA_DATE = "DATE";
+	private static final String METADATA_CONTENT_TYPE = "CONTENT-TYPE";
 
 	private static final String METADATA_URL = "url";
 	private static final String METADATA_CONTENT = "content";
 	private static final String METADATA_TYPE = "type";
-	private static final String METADATA_CONTENT_TYPE = "CONTENT-TYPE";
 	private static final String METADATA_REFERENCE = "reference";
+	private static final String METADATA_LANGUAGES = "languages";
 
 	private String threadId;
 	private String dataFolder;
+	private LanguageDetector detector;
+	private Map<String, List<String>> metadataMap = new HashMap<>();
 
 	/**
 	 * Mandatory constructor
@@ -59,7 +80,16 @@ public class OfficeFilter implements Filter {
 		}
 
 		this.threadId = id;
+		this.detector = new OptimaizeLangDetector().loadModels();
 
+		if (config.contains(CONFIG_METADATA)) {
+
+			config.get(CONFIG_METADATA).stream().forEach(c -> {
+
+				String metadataString = (String) c;
+				metadataMap.put(metadataString.split("=")[0], Arrays.asList(metadataString.substring(metadataString.split("=")[0].length() + 1)));
+			});
+		}
 	}
 
 	/**
@@ -67,7 +97,7 @@ public class OfficeFilter implements Filter {
 	 */
 	@Override
 	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_DATA_FOLDER);
+		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_METADATA);
 	}
 
 	@Override
@@ -84,7 +114,7 @@ public class OfficeFilter implements Filter {
 
 			if (eventData.containsKey(METADATA_URL) && eventData.containsKey(METADATA_CONTENT)) {
 
-				String contentString = ((RubyString) eventData.get(METADATA_CONTENT)).toString();
+				String contentString = eventData.get(METADATA_CONTENT).toString();
 				byte[] bytes = Base64.getDecoder().decode(contentString);
 
 				/**
@@ -94,7 +124,7 @@ public class OfficeFilter implements Filter {
 				String type;
 
 				if (eventData.containsKey(METADATA_TYPE)) {
-					type = ((RubyString) eventData.get(METADATA_TYPE)).toString();
+					type = eventData.get(METADATA_TYPE).toString();
 
 				} else {
 					type = tika.detect(bytes);
@@ -107,6 +137,59 @@ public class OfficeFilter implements Filter {
 
 					String reference = ((RubyString) eventData.get(METADATA_REFERENCE)).toString();
 					LOGGER.info("Found document with type {}, {}", type, reference);
+
+					try {
+
+						BodyContentHandler handler = new BodyContentHandler(-1);
+						Metadata metadata = new Metadata();
+						ParseContext pcontext = new ParseContext();
+
+						Parser parser = new AutoDetectParser();
+						parser.parse(new ByteArrayInputStream(bytes), handler, metadata, pcontext);
+						String content = handler.toString();
+
+						/**
+						 * Detects Title of Document
+						 */
+
+						String title = Arrays.asList(metadata.names()).stream().filter(name -> name.contains("title")).map(name -> metadata.get(name).trim()).filter(value -> !value.isEmpty()).findFirst().orElse(null);
+
+						if (title != null && !title.isEmpty()) {
+							eventData.put(METADATA_TITLE, title);
+						}
+
+						/**
+						 * Detects Modified Date
+						 */
+
+						String date = Arrays.asList(metadata.names()).stream().filter(name -> name.contains("modified")).map(name -> metadata.get(name).trim()).filter(value -> !value.isEmpty()).findFirst().orElse(null);
+
+						if (date != null) {
+							eventData.put(METADATA_DATE, date);
+						}
+
+						/**
+						 * Detects the language if language is not specified
+						 */
+						if (!eventData.containsKey(METADATA_LANGUAGES)) {
+
+							LanguageResult languageResult = detector.detect(content);
+							if (languageResult.isReasonablyCertain()) {
+								eventData.put(METADATA_LANGUAGES, Arrays.asList(languageResult.getLanguage()));
+							}
+						}
+
+						/**
+						 * Add Metadata Field
+						 */
+
+						if (!metadataMap.isEmpty()) {
+							eventData.put(PROPERTY_METADATA, metadataMap);
+						}
+
+					} catch (IOException | SAXException | TikaException e) {
+						LOGGER.error("Failed to extract PDF", e);
+					}
 
 				}
 
