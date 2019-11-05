@@ -1,4 +1,4 @@
-package eu.cec.digit.search.logstash.filter;
+package eu.wajja.filter;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

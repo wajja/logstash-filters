@@ -8,7 +8,7 @@ apply plugin: "eclipse"
 // ===========================================================================
 // plugin info
 // ===========================================================================
-group                      'eu.cec.digit.search.logstash.filter' // must match the package of the main plugin class
+group                      'eu.wajja.filter' // must match the package of the main plugin class
 version                    "${file("VERSION").text.trim()}" // read from required VERSION file
 description                = "Logstash OFFICE Filter"
 pluginInfo.licenses        = ['Apache-2.0'] // list of SPDX license IDs

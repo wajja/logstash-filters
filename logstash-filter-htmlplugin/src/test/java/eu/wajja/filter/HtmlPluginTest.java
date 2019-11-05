@@ -1,4 +1,4 @@
-package eu.cec.digit.search.logstash.filter;
+package eu.wajja.filter;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rometools.rome.io.impl.Base64;
 
 import co.elastic.logstash.api.Configuration;
+import eu.wajja.filter.HtmlPlugin;
 
 public class HtmlPluginTest {
 

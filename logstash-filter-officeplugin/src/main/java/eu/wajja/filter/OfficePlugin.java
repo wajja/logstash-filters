@@ -1,4 +1,4 @@
-package eu.cec.digit.search.logstash.filter;
+package eu.wajja.filter;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -15,8 +15,9 @@ import org.apache.tika.langdetect.OptimaizeLangDetector;
 import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.language.detect.LanguageResult;
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
-import org.apache.tika.parser.pdf.PDFParser;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.BodyContentHandler;
 import org.jruby.RubyString;
 import org.slf4j.Logger;
@@ -37,10 +38,10 @@ import co.elastic.logstash.api.PluginConfigSpec;
  * @author mahytom
  *
  */
-@LogstashPlugin(name = "pdfplugin")
-public class PdfPlugin implements Filter {
+@LogstashPlugin(name = "officeplugin")
+public class OfficePlugin implements Filter {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(PdfPlugin.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(OfficePlugin.class);
 
 	private final Tika tika = new Tika();
 
@@ -72,7 +73,7 @@ public class PdfPlugin implements Filter {
 	 * @param context
 	 * @throws IOException
 	 */
-	public PdfPlugin(String id, Configuration config, Context context) {
+	public OfficePlugin(String id, Configuration config, Context context) {
 
 		if (context != null && LOGGER.isDebugEnabled()) {
 			LOGGER.debug(context.toString());
@@ -132,7 +133,7 @@ public class PdfPlugin implements Filter {
 
 				// Only parse HTML here
 
-				if (type.contains("pdf")) {
+				if (type.contains("office")) {
 
 					String reference = ((RubyString) eventData.get(METADATA_REFERENCE)).toString();
 					LOGGER.info("Found document with type {}, {}", type, reference);
@@ -143,8 +144,8 @@ public class PdfPlugin implements Filter {
 						Metadata metadata = new Metadata();
 						ParseContext pcontext = new ParseContext();
 
-						PDFParser pdfparser = new PDFParser();
-						pdfparser.parse(new ByteArrayInputStream(bytes), handler, metadata, pcontext);
+						Parser parser = new AutoDetectParser();
+						parser.parse(new ByteArrayInputStream(bytes), handler, metadata, pcontext);
 						String content = handler.toString();
 
 						/**
@@ -189,6 +190,7 @@ public class PdfPlugin implements Filter {
 					} catch (IOException | SAXException | TikaException e) {
 						LOGGER.error("Failed to extract PDF", e);
 					}
+
 				}
 
 				eventData.put(METADATA_CONTENT_TYPE, type);
@@ -199,4 +201,5 @@ public class PdfPlugin implements Filter {
 		return events;
 
 	}
+
 }

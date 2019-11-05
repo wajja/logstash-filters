@@ -1,4 +1,4 @@
-package eu.cec.digit.search.logstash.filter;
+package eu.wajja.filter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +20,7 @@ import org.logstash.Event;
 import org.logstash.plugins.ConfigurationImpl;
 
 import co.elastic.logstash.api.Configuration;
+import eu.wajja.filter.PdfPlugin;
 
 public class PdfPluginTest {
 
