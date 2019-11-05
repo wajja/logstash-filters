@@ -162,9 +162,8 @@ public class PdfPlugin implements Filter {
 							PDDocument doc = PDDocument.load(bytes);
 							PDDocumentInformation info = doc.getDocumentInformation();
 
-							title = info.getTitle().trim();
-
-							if (title != null && !title.isEmpty()) {
+							if (info != null && info.getTitle() != null && !info.getTitle().trim().isEmpty()) {
+								title = info.getTitle().trim();
 								eventData.put(METADATA_TITLE, title);
 
 							} else {
