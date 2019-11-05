@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.langdetect.OptimaizeLangDetector;
@@ -155,6 +157,23 @@ public class PdfPlugin implements Filter {
 
 						if (title != null && !title.isEmpty()) {
 							eventData.put(METADATA_TITLE, title);
+						} else {
+
+							PDDocument doc = PDDocument.load(bytes);
+							PDDocumentInformation info = doc.getDocumentInformation();
+
+							title = info.getTitle().trim();
+
+							if (title != null && !title.isEmpty()) {
+								eventData.put(METADATA_TITLE, title);
+
+							} else {
+
+								String url = eventData.get(METADATA_URL).toString();
+								url = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
+								eventData.put(METADATA_TITLE, url);
+
+							}
 						}
 
 						/**

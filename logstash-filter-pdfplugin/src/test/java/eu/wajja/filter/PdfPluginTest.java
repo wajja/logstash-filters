@@ -34,7 +34,7 @@ public class PdfPluginTest {
 	}
 
 	@Test
-	public void filter1Test() throws IOException {
+	public void filterWithDetectedTitleTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 
@@ -72,7 +72,7 @@ public class PdfPluginTest {
 	}
 
 	@Test
-	public void filter2Test() throws IOException {
+	public void filterWithoutDetectedTitleTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 
@@ -88,7 +88,7 @@ public class PdfPluginTest {
 		Event e = new org.logstash.Event();
 		e.setField("reference", "reference");
 		e.setField("content", encodedContent);
-		e.setField("url", "http://localhost/test");
+		e.setField("url", "http://localhost/test.pdf");
 
 		Collection<co.elastic.logstash.api.Event> results = pdfFilter.filter(Collections.singletonList(e), null);
 		Assert.assertFalse(results.isEmpty());
@@ -96,7 +96,7 @@ public class PdfPluginTest {
 		results.stream().forEach(eee -> {
 
 			Map<String, Object> data = eee.getData();
-			Assert.assertFalse(data.containsKey("TITLE"));
+			Assert.assertTrue(data.get("TITLE").equals("test"));
 			Assert.assertTrue(data.get("DATE").equals("2013-09-17T07:55:52Z"));
 			Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/pdf"));
 
