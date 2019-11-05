@@ -1,21 +1,28 @@
 package eu.wajja.filter;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.map.HashedMap;
 import org.apache.tika.Tika;
 import org.apache.tika.io.TikaInputStream;
-import org.apache.tika.langdetect.OptimaizeLangDetector;
-import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.io.Files;
 
 import co.elastic.logstash.api.Configuration;
 import co.elastic.logstash.api.Context;
@@ -39,18 +46,19 @@ public class EuropaPlugin implements Filter {
 	private final Tika tika = new Tika();
 
 	private static final String PROPERTY_DATA_FOLDER = "dataFolder";
-	private static final String PROPERTY_METADATA = "metadata";
 	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
-	public static final PluginConfigSpec<List<Object>> CONFIG_METADATA = PluginConfigSpec.arraySetting(PROPERTY_METADATA);
 
-	private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE	";
-
+	private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE";
+	private static final String METADATA_RESTRICTED_FILTER = "RESTRICTED_FILTER";
+	private static final String METADATA_GENERAL_FILTER = "GENERAL_FILTER";
 	private static final String METADATA_CONTENT = "content";
+	private static final String METADATA_URL = "url";
 
 	private String threadId;
-	private String dataFolder;
-	private LanguageDetector detector;
-	private Map<String, List<String>> metadataMap = new HashMap<>();
+	private Map<String, String> mapGeneralFilters;
+	private Map<String, String> mapGeneralFiltersIds;
+	private Map<String, String> mapGeneralFiltersTopics;
+	private Map<String, String> mapRestrictedFilters;
 
 	/**
 	 * Mandatory constructor
@@ -60,23 +68,54 @@ public class EuropaPlugin implements Filter {
 	 * @param context
 	 * @throws IOException
 	 */
-	public EuropaPlugin(String id, Configuration config, Context context) {
+	public EuropaPlugin(String id, Configuration config, Context context) throws IOException {
 
 		if (context != null && LOGGER.isDebugEnabled()) {
 			LOGGER.debug(context.toString());
 		}
 
 		this.threadId = id;
-		this.detector = new OptimaizeLangDetector().loadModels();
 
-		if (config.contains(CONFIG_METADATA)) {
+		String dataFolder = config.get(CONFIG_DATA_FOLDER) + "/europa-data/";
 
-			config.get(CONFIG_METADATA).stream().forEach(c -> {
+		/**
+		 * General Filters
+		 */
 
-				String metadataString = (String) c;
-				metadataMap.put(metadataString.split("=")[0], Arrays.asList(metadataString.substring(metadataString.split("=")[0].length() + 1)));
+		Path pathGeneral = Paths.get(dataFolder + "/GENERAL_FILTER/");
+
+		this.mapGeneralFilters = parseCsv(pathGeneral, "general_filters.csv");
+		this.mapGeneralFiltersIds = parseCsv(pathGeneral, "general_filters_2013.csv");
+		this.mapGeneralFiltersTopics = parseCsv(pathGeneral, "general_filters_2013_topics.csv");
+
+		/**
+		 * RestrictedFilters
+		 */
+
+		Path pathRestricted = Paths.get(dataFolder + "/RESTRICTED_FILTER/");
+		this.mapRestrictedFilters = new HashedMap<>();
+
+		if (pathRestricted.toFile().exists()) {
+
+			Arrays.asList(pathRestricted.toFile().listFiles()).stream().forEach(file -> {
+
+				try {
+
+					List<String> lines = Files.readLines(file, Charset.defaultCharset());
+
+					lines.stream().forEach(i -> {
+
+						String[] cc = i.split("\\|");
+						this.mapRestrictedFilters.put(cc[0], cc[1]);
+					});
+
+				} catch (IOException e) {
+					LOGGER.error("Failed to read csv", e);
+				}
 			});
+
 		}
+
 	}
 
 	/**
@@ -84,7 +123,7 @@ public class EuropaPlugin implements Filter {
 	 */
 	@Override
 	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_METADATA);
+		return Arrays.asList(CONFIG_DATA_FOLDER);
 	}
 
 	@Override
@@ -99,11 +138,13 @@ public class EuropaPlugin implements Filter {
 
 			Map<String, Object> eventData = event.getData();
 
-			if (eventData.containsKey(METADATA_CONTENT)) {
+			if (eventData.containsKey(METADATA_URL) && eventData.containsKey(METADATA_CONTENT)) {
 
 				try {
 					String contentString = eventData.get(METADATA_CONTENT).toString();
 					byte[] bytes = Base64.getDecoder().decode(contentString);
+
+					String url = eventData.get(METADATA_URL).toString();
 
 					/**
 					 * Detects simplified content type
@@ -112,6 +153,33 @@ public class EuropaPlugin implements Filter {
 					MediaType mediaType = tika.getDetector().detect(TikaInputStream.get(bytes), new Metadata());
 					String baseType = mediaType.getBaseType().toString();
 					eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, baseType);
+
+					/**
+					 * RESTRICTED_FILTER
+					 */
+
+					List<String> restrictedFilters = getMatchingUrls(this.mapRestrictedFilters, url);
+					eventData.put(METADATA_RESTRICTED_FILTER, restrictedFilters);
+
+					/**
+					 * GENERAL_FILTER
+					 */
+
+					List<String> generalFilters = getMatchingUrls(this.mapGeneralFilters, url);
+
+					List<String> generalFiltersIds = getMatchingUrls(this.mapGeneralFiltersIds, url);
+					List<String> ids = generalFiltersIds.stream().flatMap(x -> Arrays.asList(x.split("\\/")).stream()).collect(Collectors.toList());
+
+					HashSet<String> set = new HashSet<>(ids);
+					set.stream().forEach(s -> {
+
+						if (this.mapGeneralFiltersTopics.containsKey(s)) {
+							generalFilters.add(this.mapGeneralFiltersTopics.get(s));
+						}
+
+					});
+
+					eventData.put(METADATA_GENERAL_FILTER, generalFilters);
 
 				} catch (IOException e) {
 					LOGGER.error("Failed to detect content type", e);
@@ -123,5 +191,44 @@ public class EuropaPlugin implements Filter {
 
 		return events;
 
+	}
+
+	private List<String> getMatchingUrls(Map<String, String> urls, String url) {
+
+		return urls.keySet().parallelStream().filter(k -> {
+
+			StringBuilder stringBuilder = new StringBuilder();
+
+			if (k.startsWith("*")) {
+				stringBuilder.append(".");
+			} else {
+				stringBuilder.append(".*");
+			}
+
+			stringBuilder.append(k).append(".*");
+
+			return Pattern.matches(stringBuilder.toString(), url);
+
+		}).map(k -> urls.get(k)).collect(Collectors.toList());
+	}
+
+	private Map<String, String> parseCsv(Path pathGeneral, String name) throws IOException {
+
+		Map<String, String> map = new HashedMap<>();
+
+		if (pathGeneral.toFile().exists()) {
+
+			File file = Arrays.asList(pathGeneral.toFile().listFiles()).stream().filter(f -> f.getName().equals(name)).findFirst().orElse(null);
+
+			List<String> lines = Files.readLines(file, Charset.defaultCharset());
+			lines.stream().forEach(i -> {
+
+				String[] cc = i.split("\\|");
+				map.put(cc[0], cc[1]);
+			});
+
+		}
+
+		return map;
 	}
 }
