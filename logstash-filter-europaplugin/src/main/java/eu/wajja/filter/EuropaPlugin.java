@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +55,7 @@ public class EuropaPlugin implements Filter {
 	private static final String METADATA_GENERAL_FILTER = "GENERAL_FILTER";
 	private static final String METADATA_CONTENT = "content";
 	private static final String METADATA_URL = "url";
+	private static final String METADATA_DATE = "DATE";
 
 	private String threadId;
 	private Map<String, String> mapGeneralFilters;
@@ -180,6 +183,13 @@ public class EuropaPlugin implements Filter {
 					});
 
 					eventData.put(METADATA_GENERAL_FILTER, generalFilters);
+
+					/**
+					 * DATE
+					 */
+					
+					String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(new Date());
+					eventData.put(METADATA_DATE, Arrays.asList(date));
 
 				} catch (IOException e) {
 					LOGGER.error("Failed to detect content type", e);

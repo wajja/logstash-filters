@@ -56,6 +56,7 @@ public class EuropaPluginTest {
 
 			Map<String, Object> data = eee.getData();
 			Assert.assertTrue(data.get("SIMPLIFIED_CONTENT_TYPE").equals("application/pdf"));
+			Assert.assertTrue(data.containsKey("DATE"));
 
 		});
 
@@ -94,6 +95,7 @@ public class EuropaPluginTest {
 			Assert.assertTrue(filters.size() == 2);
 			Assert.assertTrue(filters.contains("European Commission"));
 			Assert.assertTrue(filters.contains("General Information"));
+			Assert.assertTrue(data.containsKey("DATE"));
 		});
 
 	}
@@ -133,6 +135,7 @@ public class EuropaPluginTest {
 			Assert.assertTrue(filters.contains("General Information"));
 			Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU/INFORMATION AND COMMUNICATION OF THE EU"));
 			Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU/EU INSTITUTIONS ADMINISTRATION AND STAFF"));
+			Assert.assertTrue(data.containsKey("DATE"));
 		});
 
 	}
@@ -170,7 +173,7 @@ public class EuropaPluginTest {
 			Assert.assertTrue(filters.size() == 2);
 			Assert.assertTrue(filters.contains("GENERAL INFORMATION"));
 			Assert.assertTrue(filters.contains("THE CAP"));
-
+			Assert.assertTrue(data.containsKey("DATE"));
 		});
 
 	}
