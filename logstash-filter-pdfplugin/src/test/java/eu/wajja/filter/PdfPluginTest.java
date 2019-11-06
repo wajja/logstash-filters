@@ -21,7 +21,6 @@ import org.logstash.Event;
 import org.logstash.plugins.ConfigurationImpl;
 
 import co.elastic.logstash.api.Configuration;
-import eu.wajja.filter.PdfPlugin;
 
 public class PdfPluginTest {
 
@@ -72,7 +71,7 @@ public class PdfPluginTest {
 
 	}
 
-		@Test
+	@Test
 	public void filterWithNoTitleOrUrlTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
@@ -109,6 +108,7 @@ public class PdfPluginTest {
 		});
 
 	}
+
 	@Test
 	public void filterWithoutDetectedTitleTest() throws IOException {
 
@@ -135,6 +135,45 @@ public class PdfPluginTest {
 
 			Map<String, Object> data = eee.getData();
 			Assert.assertTrue(data.get("TITLE").equals("test"));
+			Assert.assertTrue(data.get("DATE").equals("2013-09-17T07:55:52Z"));
+			Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/pdf"));
+
+			Map<String, List<String>> metadata = ((Map<String, List<String>>) data.get("metadata"));
+			Assert.assertTrue(metadata.containsKey("META1") && metadata.get("META1").get(0).equals("VALUE1"));
+			Assert.assertTrue(metadata.containsKey("META2") && metadata.get("META2").get(0).equals("VALUE2"));
+
+			Assert.assertTrue(((List<String>) data.get("languages")).get(0).equals("en"));
+		});
+
+	}
+
+	@Test
+	public void filterWithContentDispositionTest() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		Configuration config = new ConfigurationImpl(configValues);
+		configValues.put("metadata", Arrays.asList("META1=VALUE1", "META2=VALUE2"));
+
+		PdfPlugin pdfFilter = new PdfPlugin(UUID.randomUUID().toString(), config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("applicationpdf_74173610-9cbc-477e-8974-4b7ea332e56a");
+		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField("reference", "reference");
+		e.setField("content", encodedContent);
+		e.setField("url", "http://localhost/test.pdf");
+		e.setField("Content-Disposition", "[attachment; filename=\"my_pdf_document.pdf\"]");
+
+		Collection<co.elastic.logstash.api.Event> results = pdfFilter.filter(Collections.singletonList(e), null);
+		Assert.assertFalse(results.isEmpty());
+
+		results.stream().forEach(eee -> {
+
+			Map<String, Object> data = eee.getData();
+			Assert.assertTrue(data.get("TITLE").equals("my pdf document"));
 			Assert.assertTrue(data.get("DATE").equals("2013-09-17T07:55:52Z"));
 			Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/pdf"));
 

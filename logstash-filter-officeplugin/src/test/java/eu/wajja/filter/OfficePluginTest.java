@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,7 +21,6 @@ import org.logstash.Event;
 import org.logstash.plugins.ConfigurationImpl;
 
 import co.elastic.logstash.api.Configuration;
-import eu.wajja.filter.OfficePlugin;
 
 public class OfficePluginTest {
 
@@ -105,6 +105,41 @@ public class OfficePluginTest {
 			Assert.assertTrue(metadata.containsKey("META2") && metadata.get("META2").get(0).equals("VALUE2"));
 
 			Assert.assertTrue(((List<String>) data.get("languages")).get(0).equals("da"));
+		});
+
+	}
+
+	@Test
+	public void filterContentDispositionWordDocTest() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		Configuration config = new ConfigurationImpl(configValues);
+		configValues.put("metadata", Arrays.asList("META1=VALUE1", "META2=VALUE2"));
+
+		OfficePlugin officeFilter = new OfficePlugin(UUID.randomUUID().toString(), config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("application_word_1.docx");
+		String encodedContent = Base64.getEncoder().encodeToString(IOUtils.toByteArray(inputStream));
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField("reference", "reference");
+		e.setField("content", encodedContent);
+		e.setField("url", "https://localhost/capacity/file/67/download?token=BRB");
+		e.setField("Content-Disposition", "[attachment; filename=\"my_word_document.docx\"]");
+
+		Collection<co.elastic.logstash.api.Event> results = officeFilter.filter(Collections.singletonList(e), null);
+		Assert.assertFalse(results.isEmpty());
+
+		results.stream().forEach(eee -> {
+
+			Map<String, Object> data = eee.getData();
+			String title = data.get("TITLE").toString();
+			Assert.assertTrue(title.equals("my word document"));
+			Assert.assertTrue(data.get("DATE").equals("2018-01-27T20:48:00Z"));
+			Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+
 		});
 
 	}

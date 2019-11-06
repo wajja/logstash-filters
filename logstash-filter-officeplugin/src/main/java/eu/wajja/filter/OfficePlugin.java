@@ -59,6 +59,7 @@ public class OfficePlugin implements Filter {
 	private static final String METADATA_TYPE = "type";
 	private static final String METADATA_REFERENCE = "reference";
 	private static final String METADATA_LANGUAGES = "languages";
+	private static final String METADATA_CONTENT_DISPOSITION = "Content-Disposition";
 
 	private String threadId;
 	private String dataFolder;
@@ -156,6 +157,23 @@ public class OfficePlugin implements Filter {
 
 						if (title != null && !title.isEmpty()) {
 							eventData.put(METADATA_TITLE, title);
+						} else {
+
+							if (eventData.containsKey(METADATA_CONTENT_DISPOSITION) && eventData.get(METADATA_CONTENT_DISPOSITION).toString().contains("filename=")) {
+
+								String filename = eventData.get(METADATA_CONTENT_DISPOSITION).toString();
+								filename = filename.substring(filename.indexOf("filename=")).replace("filename=", "").trim();
+
+								if (filename.contains(".")) {
+									filename = filename.substring(0, filename.lastIndexOf('.'));
+								}
+
+								filename = filename.replaceAll("[^A-Za-z0-9]", " ").trim();
+
+								eventData.put(METADATA_TITLE, filename);
+
+							}
+
 						}
 
 						/**
