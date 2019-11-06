@@ -169,7 +169,12 @@ public class PdfPlugin implements Filter {
 							} else {
 
 								String url = eventData.get(METADATA_URL).toString();
-								url = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
+								url = url.substring(url.lastIndexOf('/') + 1);
+
+								if (url.contains(".")) {
+									url = url.substring(0, url.lastIndexOf('.'));
+								}
+
 								eventData.put(METADATA_TITLE, url);
 
 							}
