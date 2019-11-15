@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -227,7 +228,23 @@ public class HtmlPlugin implements Filter {
 							 */
 
 							Map<String, List<String>> metadata = extractMetadata(document);
-							metadata.entrySet().stream().forEach(entry -> eventData.put(entry.getKey(), entry.getValue()));
+
+							for (Entry<String, List<String>> entry : metadata.entrySet()) {
+
+								Entry<String, Object> entryTmp = eventData.entrySet().stream().filter(x -> x.getKey().equals(entry.getKey())).findFirst().orElse(null);
+
+								if (entryTmp != null && entryTmp.getValue() instanceof List) {
+
+									@SuppressWarnings("unchecked")
+									List<String> list = new ArrayList<>((List<String>) entryTmp.getValue());
+									list.addAll(entry.getValue());
+									eventData.put(entry.getKey(), list);
+
+								} else {
+									eventData.put(entry.getKey(), entry.getValue());
+								}
+
+							}
 
 							/**
 							 * Export and save to disk for debugging
@@ -308,7 +325,17 @@ public class HtmlPlugin implements Filter {
 				Matcher m = p.matcher(content);
 
 				while (m.find()) {
-					map.put(propertyName, Arrays.asList(m.group(m.groupCount())));
+
+					if (map.containsKey(propertyName)) {
+
+						List<String> list = new ArrayList<>(map.get(propertyName));
+						list.add(m.group(m.groupCount()));
+						map.put(propertyName, list);
+
+					} else {
+						map.put(propertyName, Arrays.asList(m.group(m.groupCount())));
+					}
+
 				}
 
 			}

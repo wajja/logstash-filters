@@ -375,6 +375,47 @@ public class HtmlPluginTest {
 	}
 
 	@Test
+	public void filterHtmlContentFromRegex4Test() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+		configValues.put(PROPERTY_EXTRACT_CONTENT, true);
+		configValues.put(PROPERTY_EXTRACT_TITLE_CSS, Arrays.asList(".page-header__hero-title"));
+		configValues.put(PROPERTY_EXTRACT_BODY_CSS, Arrays.asList(".page-content", "#main-content", "body .container", ".region-content"));
+		configValues.put(PROPERTY_EXTRACT_TITLE_REGEX, Arrays.asList("content=\"(.*?)\".property=\"og:title\"", "content=\"(.*?)\".name=\"dcterms.title\"", "property=\"og:title\".content=\"(.*?)\"", "name=\"dcterms.title\".content=\"(.*?)\"", "<title>(.*?)</title>"));
+		configValues.put(PROPERTY_EXTRACT_METADATA_REGEX, Arrays.asList("SITENAME:content=\"(.*?)\".property=\"og:site_name\"", "SITENAME:property=\"og:site_name\".content=\"(.*?)\""));
+		configValues.put(PROPERTY_METADATA, Arrays.asList("SOURCE=EC-EUROPA-EU-BELGIUM", "SITENAME=Belgium", "SITEDESCRIPTION=Représentation en Belgique", "SITEURL=https://ec.europa.eu/belgium/home_nl"));
+		
+		
+		Configuration config = new ConfigurationImpl(configValues);
+		HtmlPlugin htmlFilter = new HtmlPlugin("thread_id", config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("html_title_4.html");
+		String encodedContent = java.util.Base64.getEncoder().encodeToString(IOUtils.toByteArray(inputStream));
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField(METADATA_REFERENCE, METADATA_REFERENCE);
+		e.setField(METADATA_CONTENT, encodedContent);
+		e.setField(METADATA_URL, "http://localhost/test");
+
+		Collection<co.elastic.logstash.api.Event> results = htmlFilter.filter(Collections.singletonList(e), null);
+
+		Assert.assertFalse(results.isEmpty());
+
+		results.stream().forEach(eee -> {
+
+			Map<String, Object> data = eee.getData();
+
+			Assert.assertTrue(data.containsKey(METADATA_TITLE));
+			Assert.assertTrue(data.get(METADATA_TITLE).toString().equals("Economic forecast for Luxembourg"));
+
+			Assert.assertTrue(data.containsKey("SITENAME"));
+			Assert.assertTrue(data.get("SITENAME").toString().equals("[Belgium, Europska komisija - European Commission]"));
+		});
+
+	}
+
+	@Test
 	public void filterMetadataContentFromRegex1Test() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
