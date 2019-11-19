@@ -56,6 +56,7 @@ public class EuropaPlugin implements Filter {
 	private static final String METADATA_CONTENT = "content";
 	private static final String METADATA_URL = "url";
 	private static final String METADATA_DATE = "DATE";
+	private static final String METADATA_TYPE = "type";
 
 	private String threadId;
 	private Map<String, String> mapGeneralFilters;
@@ -153,9 +154,16 @@ public class EuropaPlugin implements Filter {
 					 * Detects simplified content type
 					 */
 
-					MediaType mediaType = tika.getDetector().detect(TikaInputStream.get(bytes), new Metadata());
-					String baseType = mediaType.getBaseType().toString();
-					eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, baseType);
+					if (eventData.containsKey(METADATA_TYPE)) {
+						String type = eventData.get(METADATA_TYPE).toString();
+						eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, type);
+
+					} else {
+
+						MediaType mediaType = tika.getDetector().detect(TikaInputStream.get(bytes), new Metadata());
+						String baseType = mediaType.getBaseType().toString();
+						eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, baseType);
+					}
 
 					/**
 					 * RESTRICTED_FILTER
@@ -187,7 +195,7 @@ public class EuropaPlugin implements Filter {
 					/**
 					 * DATE
 					 */
-					
+
 					String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(new Date());
 					eventData.put(METADATA_DATE, Arrays.asList(date));
 

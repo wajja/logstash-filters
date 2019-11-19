@@ -205,8 +205,8 @@ public class OfficePlugin implements Filter {
 							eventData.put(PROPERTY_METADATA, metadataMap);
 						}
 
-					} catch (IOException | SAXException | TikaException e) {
-						LOGGER.error("Failed to extract PDF", e);
+					} catch (Exception e) {
+						LOGGER.error("Failed to extract Office Document", e);
 					}
 
 				}

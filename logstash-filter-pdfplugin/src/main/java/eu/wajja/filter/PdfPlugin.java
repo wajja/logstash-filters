@@ -227,7 +227,7 @@ public class PdfPlugin implements Filter {
 							eventData.put(PROPERTY_METADATA, metadataMap);
 						}
 
-					} catch (IOException | SAXException | TikaException e) {
+					} catch (Exception e) {
 						LOGGER.error("Failed to extract PDF", e);
 					}
 				}

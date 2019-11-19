@@ -295,8 +295,8 @@ public class HtmlPlugin implements Filter {
 							}
 						}
 
-					} catch (IOException e) {
-						LOGGER.error("Failed to extract content from file", e);
+					} catch (Exception e) {
+						LOGGER.error("Failed to extract HTML", e);
 					}
 
 				}
