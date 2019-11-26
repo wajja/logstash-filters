@@ -134,7 +134,7 @@ public class OfficePlugin implements Filter {
 
 				// Only parse HTML here
 
-				if (type.contains("office")) {
+				if (type.contains("office") || type.contains("msword")) {
 
 					String reference = ((RubyString) eventData.get(METADATA_REFERENCE)).toString();
 					LOGGER.info("Found document with type {}, {}", type, reference);
