@@ -108,6 +108,43 @@ public class PdfPluginTest {
 		});
 
 	}
+	
+	@Test
+	public void filterWithTitleDetectionTest() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		Configuration config = new ConfigurationImpl(configValues);
+		configValues.put("metadata", Arrays.asList("META1=VALUE1", "META2=VALUE2"));
+
+		PdfPlugin pdfFilter = new PdfPlugin(UUID.randomUUID().toString(), config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("application_pdf_1.pdf");
+		String encodedContent = Base64.getEncoder().encodeToString(IOUtils.toByteArray(inputStream));
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField("reference", "reference");
+		e.setField("content", encodedContent);
+		e.setField("url", "https://ec.europa.eu/docsroom/documents/37084/attachments/1/translations/en/renditions/pdf");
+		e.setField("Content-Disposition", "Content-Disposition=[attachment; filename =\"3. Market Dynamics from a DG COMP Perspective.pdf\"]");
+		
+		
+		Collection<co.elastic.logstash.api.Event> results = pdfFilter.filter(Collections.singletonList(e), null);
+		Assert.assertFalse(results.isEmpty());
+
+		results.stream().forEach(eee -> {
+
+			Map<String, Object> data = eee.getData();
+			Assert.assertTrue(data.containsKey("TITLE"));
+			
+			Assert.assertTrue(data.get("TITLE").equals("3  Market Dynamics from a DG COMP Perspective"));
+			
+		});
+
+	}
+	
+	
 
 	@Test
 	public void filterWithoutDetectedTitleTest() throws IOException {

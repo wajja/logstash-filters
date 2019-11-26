@@ -12,7 +12,6 @@ import java.util.Map;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.tika.Tika;
-import org.apache.tika.exception.TikaException;
 import org.apache.tika.langdetect.OptimaizeLangDetector;
 import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.language.detect.LanguageResult;
@@ -23,7 +22,6 @@ import org.apache.tika.sax.BodyContentHandler;
 import org.jruby.RubyString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xml.sax.SAXException;
 
 import co.elastic.logstash.api.Configuration;
 import co.elastic.logstash.api.Context;
@@ -169,10 +167,14 @@ public class PdfPlugin implements Filter {
 
 							} else {
 
-								if (eventData.containsKey(METADATA_CONTENT_DISPOSITION) && eventData.get(METADATA_CONTENT_DISPOSITION).toString().contains("filename=")) {
+								if (eventData.containsKey(METADATA_CONTENT_DISPOSITION) && eventData.get(METADATA_CONTENT_DISPOSITION).toString().contains("filename")) {
 
 									String filename = eventData.get(METADATA_CONTENT_DISPOSITION).toString();
-									filename = filename.substring(filename.indexOf("filename=")).replace("filename=", "").trim();
+									filename = filename.substring(filename.indexOf("filename")).replace("filename", "").trim();
+
+									if (filename.startsWith("=")) {
+										filename = filename.substring(1);
+									}
 
 									if (filename.contains(".")) {
 										filename = filename.substring(0, filename.lastIndexOf('.'));
