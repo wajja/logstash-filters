@@ -141,6 +141,41 @@ public class OfficePluginTest {
 		});
 
 	}
+	
+	@Test
+	public void filter4Test() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		Configuration config = new ConfigurationImpl(configValues);
+		configValues.put("metadata", Arrays.asList("META1=VALUE1", "META2=VALUE2"));
+
+		OfficePlugin officeFilter = new OfficePlugin(UUID.randomUUID().toString(), config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("application_word_3.docx");
+		String encodedContent = Base64.getEncoder().encodeToString(IOUtils.toByteArray(inputStream));
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField("reference", "reference");
+		e.setField("content", encodedContent);
+		e.setField("url", "https://biodiversity.europa.eu/mtr/mtr_country_reports.docx");
+
+		Collection<co.elastic.logstash.api.Event> results = officeFilter.filter(Collections.singletonList(e), null);
+		Assert.assertFalse(results.isEmpty());
+
+		results.stream().forEach(eee -> {
+
+			Map<String, Object> data = eee.getData();
+			Assert.assertTrue(data.containsKey("TITLE"));
+			
+			String title = data.get("TITLE").toString();
+			Assert.assertTrue(title.equals("mtr_country_reports"));
+		});
+
+	}
+	
+	
 	@Test
 	public void filterContentDispositionWordDocTest() throws IOException {
 
