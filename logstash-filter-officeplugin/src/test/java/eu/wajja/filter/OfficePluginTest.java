@@ -58,7 +58,7 @@ public class OfficePluginTest {
 		results.stream().forEach(eee -> {
 
 			Map<String, Object> data = eee.getData();
-			Assert.assertFalse(data.containsKey("TITLE"));
+			Assert.assertTrue(data.containsKey("TITLE"));
 			Assert.assertTrue(data.get("DATE").equals("2015-10-01T07:08:00Z"));
 			Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
 
@@ -96,7 +96,7 @@ public class OfficePluginTest {
 		results.stream().forEach(eee -> {
 
 			Map<String, Object> data = eee.getData();
-			Assert.assertFalse(data.containsKey("TITLE"));
+			Assert.assertTrue(data.containsKey("TITLE"));
 			Assert.assertTrue(data.get("DATE").equals("2015-03-23T15:19:00Z"));
 			Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
 
