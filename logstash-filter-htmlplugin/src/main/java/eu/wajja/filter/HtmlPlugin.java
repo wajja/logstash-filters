@@ -429,7 +429,7 @@ public class HtmlPlugin implements Filter {
 				stringBuilder.append(m.group(m.groupCount())).append(" ");
 			}
 
-			if (!stringBuilder.toString().isEmpty()) {
+			if (!stringBuilder.toString().trim().isEmpty()) {
 				break;
 			}
 
