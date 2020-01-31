@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,11 +49,15 @@ public class EuropaPlugin implements Filter {
 	private final Tika tika = new Tika();
 
 	private static final String PROPERTY_DATA_FOLDER = "dataFolder";
+	private static final String PROPERTY_CUSTOM_METADATA = "customMetadata";
+
 	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
+	public static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<String, Object>(), false, false);
 
 	private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE";
 	private static final String METADATA_RESTRICTED_FILTER = "RESTRICTED_FILTER";
 	private static final String METADATA_GENERAL_FILTER = "GENERAL_FILTER";
+	private static final String METADATA_SITETITLE = "SITETITLE";
 	private static final String METADATA_CONTENT = "content";
 	private static final String METADATA_URL = "url";
 	private static final String METADATA_DATE = "DATE";
@@ -63,6 +68,7 @@ public class EuropaPlugin implements Filter {
 	private Map<String, String> mapGeneralFiltersIds;
 	private Map<String, String> mapGeneralFiltersTopics;
 	private Map<String, String> mapRestrictedFilters;
+	private Map<String, Object> customMetadata;
 
 	/**
 	 * Mandatory constructor
@@ -81,6 +87,7 @@ public class EuropaPlugin implements Filter {
 		this.threadId = id;
 
 		String dataFolder = config.get(CONFIG_DATA_FOLDER) + "/europa-data/";
+		this.customMetadata = config.get(CONFIG_CUSTOM_METADATA);
 
 		/**
 		 * General Filters
@@ -203,6 +210,26 @@ public class EuropaPlugin implements Filter {
 					LOGGER.error("Failed to detect content type", e);
 				}
 
+			}
+
+			if (eventData.containsKey(METADATA_URL)) {
+
+				String url = eventData.get(METADATA_URL).toString();
+
+				if (this.customMetadata.containsKey(url)) {
+
+					if (this.customMetadata.get(url) instanceof String[]) {
+
+						String[] values = (String[]) this.customMetadata.get(url);
+						eventData.put(METADATA_SITETITLE, Arrays.asList(values));
+
+					} else {
+
+						List<String> values = (List<String>) this.customMetadata.get(url);
+						eventData.put(METADATA_SITETITLE, values);
+					}
+
+				}
 			}
 
 		});

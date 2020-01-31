@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -174,6 +175,130 @@ public class EuropaPluginTest {
 			Assert.assertTrue(filters.contains("GENERAL INFORMATION"));
 			Assert.assertTrue(filters.contains("THE CAP"));
 			Assert.assertTrue(data.containsKey("DATE"));
+		});
+
+	}
+
+	@Test
+	public void filterCustomMetadata1FilterTest() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		URL url = this.getClass().getClassLoader().getResource("applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e");
+		File file = new File(url.getPath());
+		configValues.put("dataFolder", file.getParent());
+
+		Map<String, Object> map = new HashMap<>();
+		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
+		map.put("http://#2", Arrays.asList("VALUE3"));
+
+		configValues.put("customMetadata", map);
+
+		Configuration config = new ConfigurationImpl(configValues);
+
+		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e");
+		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField("reference", "reference");
+		e.setField("content", encodedContent);
+		e.setField("url", "http://#1");
+
+		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+		Assert.assertFalse(results.isEmpty());
+
+		results.stream().forEach(eee -> {
+
+			Map<String, Object> data = eee.getData();
+			List<String> filters = (List<String>) data.get("SITETITLE");
+
+			Assert.assertTrue(filters.size() == 2);
+			Assert.assertTrue(filters.contains("VALUE1"));
+			Assert.assertTrue(filters.contains("VALUE2"));
+		});
+
+	}
+
+	@Test
+	public void filterCustomMetadata2FilterTest() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		URL url = this.getClass().getClassLoader().getResource("applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e");
+		File file = new File(url.getPath());
+		configValues.put("dataFolder", file.getParent());
+
+		Map<String, Object> map = new HashMap<>();
+		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
+		map.put("http://#2", Arrays.asList("VALUE3"));
+
+		configValues.put("customMetadata", map);
+
+		Configuration config = new ConfigurationImpl(configValues);
+
+		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e");
+		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField("reference", "reference");
+		e.setField("content", encodedContent);
+		e.setField("url", "http://#2");
+
+		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+		Assert.assertFalse(results.isEmpty());
+
+		results.stream().forEach(eee -> {
+
+			Map<String, Object> data = eee.getData();
+			List<String> filters = (List<String>) data.get("SITETITLE");
+
+			Assert.assertTrue(filters.size() == 1);
+			Assert.assertTrue(filters.contains("VALUE3"));
+		});
+
+	}
+
+	@Test
+	public void filterCustomMetadata3FilterTest() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		URL url = this.getClass().getClassLoader().getResource("applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e");
+		File file = new File(url.getPath());
+		configValues.put("dataFolder", file.getParent());
+
+		Map<String, Object> map = new HashMap<>();
+		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
+		map.put("http://#2", Arrays.asList("VALUE3"));
+
+		configValues.put("customMetadata", map);
+
+		Configuration config = new ConfigurationImpl(configValues);
+
+		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e");
+		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField("reference", "reference");
+		e.setField("content", encodedContent);
+		e.setField("url", "http://#3");
+
+		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+		Assert.assertFalse(results.isEmpty());
+
+		results.stream().forEach(eee -> {
+
+			Map<String, Object> data = eee.getData();
+			Assert.assertFalse(data.containsKey("SITETITLE"));
 		});
 
 	}
