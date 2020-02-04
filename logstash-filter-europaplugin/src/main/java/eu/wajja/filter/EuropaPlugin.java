@@ -134,7 +134,7 @@ public class EuropaPlugin implements Filter {
 	 */
 	@Override
 	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_DATA_FOLDER);
+		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA);
 	}
 
 	@Override
