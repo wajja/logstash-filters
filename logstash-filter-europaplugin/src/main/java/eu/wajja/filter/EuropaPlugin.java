@@ -50,9 +50,11 @@ public class EuropaPlugin implements Filter {
 
 	private static final String PROPERTY_DATA_FOLDER = "dataFolder";
 	private static final String PROPERTY_CUSTOM_METADATA = "customMetadata";
+	private static final String PROPERTY_SIMPLIFIED_CONTENT_TYPE = "simplifiedContentType";
 
 	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
 	private static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<String, Object>(), false, false);
+	private static final PluginConfigSpec<Map<String, Object>> CONFIG_SIMPLIFIED_CONTENT_TYPE = PluginConfigSpec.hashSetting(PROPERTY_SIMPLIFIED_CONTENT_TYPE, new HashMap<String, Object>(), false, false);
 
 	private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE";
 	private static final String METADATA_RESTRICTED_FILTER = "RESTRICTED_FILTER";
@@ -61,7 +63,6 @@ public class EuropaPlugin implements Filter {
 	private static final String METADATA_CONTENT = "content";
 	private static final String METADATA_URL = "url";
 	private static final String METADATA_DATE = "DATE";
-	private static final String METADATA_TYPE = "type";
 	private static final String METADATA_KEYWORDS = "KEYWORDS";
 
 	private String threadId;
@@ -70,6 +71,7 @@ public class EuropaPlugin implements Filter {
 	private Map<String, String> mapGeneralFiltersTopics;
 	private Map<String, String> mapRestrictedFilters;
 	private Map<String, Object> customMetadata;
+	private Map<String, Object> simplifiedContentType;
 
 	/**
 	 * Mandatory constructor
@@ -89,6 +91,7 @@ public class EuropaPlugin implements Filter {
 
 		String dataFolder = config.get(CONFIG_DATA_FOLDER) + "/europa-data/";
 		this.customMetadata = config.get(CONFIG_CUSTOM_METADATA);
+		this.simplifiedContentType = config.get(CONFIG_SIMPLIFIED_CONTENT_TYPE);
 
 		/**
 		 * General Filters
@@ -135,7 +138,7 @@ public class EuropaPlugin implements Filter {
 	 */
 	@Override
 	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA);
+		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA, CONFIG_SIMPLIFIED_CONTENT_TYPE);
 	}
 
 	@Override
@@ -159,18 +162,16 @@ public class EuropaPlugin implements Filter {
 					String url = eventData.get(METADATA_URL).toString();
 
 					/**
-					 * Detects simplified content type
+					 * SIMPLIFIED CONTENT TYPE
 					 */
 
-					if (eventData.containsKey(METADATA_TYPE)) {
-						String type = eventData.get(METADATA_TYPE).toString();
-						eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, type);
+					MediaType mediaType = tika.getDetector().detect(TikaInputStream.get(bytes), new Metadata());
+					String contentType = mediaType.getSubtype();
 
+					if (contentType != null && this.simplifiedContentType.containsKey(contentType)) {
+						eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, (String) simplifiedContentType.get(contentType));
 					} else {
-
-						MediaType mediaType = tika.getDetector().detect(TikaInputStream.get(bytes), new Metadata());
-						String baseType = mediaType.getBaseType().toString();
-						eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, baseType);
+						LOGGER.info("Could not map simplified content type from url : {}, detected simple : {}", url, contentType);
 					}
 
 					/**
@@ -183,7 +184,7 @@ public class EuropaPlugin implements Filter {
 					}
 
 					if (!keywordsUrl.isEmpty()) {
-						
+
 						String[] keywordUrls = keywordsUrl.split("/");
 
 						for (int x = 0; x < keywordUrls.length; x++) {
