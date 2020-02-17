@@ -56,6 +56,7 @@ public class EuropaPlugin implements Filter {
 	private static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<String, Object>(), false, false);
 	private static final PluginConfigSpec<Map<String, Object>> CONFIG_SIMPLIFIED_CONTENT_TYPE = PluginConfigSpec.hashSetting(PROPERTY_SIMPLIFIED_CONTENT_TYPE, new HashMap<String, Object>(), false, false);
 
+	private static final String ALLOWED_LANGUAGES = "(be)|(bg)|(bs)|(ca)|(cs)|(cy)|(da)|(de)|(el)|(en)|(es)|(et)|(eu)|(fi)|(fr)|(ga)|(hr)|(hu)|(is)|(it)|(lb)|(lt)|(lv)|(mk)|(mt)|(nl)|(no)|(pl)|(pt)|(ro)|(ru)|(sk)|(sl)|(sq)|(sr)|(sv)|(tr)|(uk)";
 	private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE";
 	private static final String METADATA_RESTRICTED_FILTER = "RESTRICTED_FILTER";
 	private static final String METADATA_GENERAL_FILTER = "GENERAL_FILTER";
@@ -64,6 +65,7 @@ public class EuropaPlugin implements Filter {
 	private static final String METADATA_URL = "url";
 	private static final String METADATA_DATE = "DATE";
 	private static final String METADATA_KEYWORDS = "KEYWORDS";
+	private static final String METADATA_LANGUAGES = "languages";
 
 	private String threadId;
 	private Map<String, String> mapGeneralFilters;
@@ -178,7 +180,7 @@ public class EuropaPlugin implements Filter {
 					 * KEYWORDS
 					 */
 
-					String keywordsUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/).*[a-z](\\/)", "");
+					String keywordsUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/)[a-z]{2,}(\\/)", "");
 					if (keywordsUrl.endsWith("/")) {
 						keywordsUrl = keywordsUrl.substring(0, keywordsUrl.length() - 1);
 					}
@@ -193,6 +195,38 @@ public class EuropaPlugin implements Filter {
 
 						if (keywordUrls.length > 0) {
 							eventData.put(METADATA_KEYWORDS, Arrays.asList(keywordUrls));
+						}
+					}
+
+					/**
+					 * LANGUAGES
+					 */
+
+					String languagesUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/)[a-z]{2,}(\\/)", "");
+					if (languagesUrl.endsWith("/")) {
+						languagesUrl = languagesUrl.substring(0, languagesUrl.length() - 1);
+					}
+
+					if (!languagesUrl.isEmpty()) {
+
+						String[] languagesUrls = languagesUrl.split("/");
+
+						for (int x = 0; x < languagesUrls.length; x++) {
+
+							String param = languagesUrls[x];
+
+							if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")..*")) {
+								param = param.replaceAll(".*_", "").substring(0, 2);
+								eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
+
+							} else if (param.matches(ALLOWED_LANGUAGES)) {
+								eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
+
+							} else if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")")) {
+								param = param.replaceAll(".*_", "");
+								eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
+
+							}
 						}
 					}
 
