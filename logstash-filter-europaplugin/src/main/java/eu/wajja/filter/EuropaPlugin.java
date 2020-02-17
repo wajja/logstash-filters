@@ -62,6 +62,7 @@ public class EuropaPlugin implements Filter {
 	private static final String METADATA_URL = "url";
 	private static final String METADATA_DATE = "DATE";
 	private static final String METADATA_TYPE = "type";
+	private static final String METADATA_KEYWORDS = "KEYWORDS";
 
 	private String threadId;
 	private Map<String, String> mapGeneralFilters;
@@ -170,6 +171,28 @@ public class EuropaPlugin implements Filter {
 						MediaType mediaType = tika.getDetector().detect(TikaInputStream.get(bytes), new Metadata());
 						String baseType = mediaType.getBaseType().toString();
 						eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, baseType);
+					}
+
+					/**
+					 * KEYWORDS
+					 */
+
+					String keywordsUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/).*[a-z](\\/)", "");
+					if (keywordsUrl.endsWith("/")) {
+						keywordsUrl = keywordsUrl.substring(0, keywordsUrl.length() - 1);
+					}
+
+					if (!keywordsUrl.isEmpty()) {
+						
+						String[] keywordUrls = keywordsUrl.split("/");
+
+						for (int x = 0; x < keywordUrls.length; x++) {
+							keywordUrls[x] = keywordUrls[x].replace("-", " ");
+						}
+
+						if (keywordUrls.length > 0) {
+							eventData.put(METADATA_KEYWORDS, Arrays.asList(keywordUrls));
+						}
 					}
 
 					/**

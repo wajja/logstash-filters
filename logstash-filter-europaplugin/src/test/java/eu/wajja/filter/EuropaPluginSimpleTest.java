@@ -23,7 +23,7 @@ import org.logstash.plugins.ConfigurationImpl;
 
 import co.elastic.logstash.api.Configuration;
 
-public class EuropaPluginTest {
+public class EuropaPluginSimpleTest {
 
 	private Properties properties;
 
