@@ -91,6 +91,38 @@ public class EuropaPluginKeywordDetectionTest {
 		Assert.assertFalse(keywords.contains(LOCALHOST));
 
 	}
+	
+	@SuppressWarnings("unchecked")
+	@Test
+	public void keywordSimpleDetectionWithEuropaHostnameTest() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+		Configuration config = new ConfigurationImpl(configValues);
+		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField(REFERENCE, REFERENCE);
+		e.setField(CONTENT, encodedContent);
+		e.setField("url", "https://ec.europa.eu/maritimeaffairs/press/");
+
+		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+		Assert.assertFalse(results.isEmpty());
+
+		Event eee = (Event) results.stream().findFirst().orElse(new Event());
+		Map<String, Object> data = eee.getData();
+
+		Assert.assertTrue(data.containsKey(KEYWORDS));
+		List<String> keywords = (List<String>) data.get(KEYWORDS);
+
+		Assert.assertTrue(keywords.contains("maritimeaffairs"));
+		Assert.assertTrue(keywords.contains("press"));
+		Assert.assertFalse(keywords.contains("ec.europa.eu"));
+
+	}
 
 	@SuppressWarnings("unchecked")
 	@Test

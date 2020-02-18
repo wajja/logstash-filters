@@ -180,7 +180,7 @@ public class EuropaPlugin implements Filter {
 					 * KEYWORDS
 					 */
 
-					String keywordsUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/)[a-z]{2,}(\\/)", "");
+					String keywordsUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/)[^\\/]{2,}(\\/)", "");
 					if (keywordsUrl.endsWith("/")) {
 						keywordsUrl = keywordsUrl.substring(0, keywordsUrl.length() - 1);
 					}
