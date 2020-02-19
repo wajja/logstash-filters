@@ -54,6 +54,7 @@ public class EuropaPluginKeywordDetectionTest {
 		Assert.assertTrue(data.containsKey(KEYWORDS));
 		List<String> keywords = (List<String>) data.get(KEYWORDS);
 
+		Assert.assertTrue(keywords.size() == 2);
 		Assert.assertTrue(keywords.contains(KEYWORDS1));
 		Assert.assertTrue(keywords.contains(KEYWORDS2));
 		Assert.assertFalse(keywords.contains(LOCALHOST));
@@ -86,6 +87,7 @@ public class EuropaPluginKeywordDetectionTest {
 		Assert.assertTrue(data.containsKey(KEYWORDS));
 		List<String> keywords = (List<String>) data.get(KEYWORDS);
 
+		Assert.assertTrue(keywords.size() == 2);
 		Assert.assertTrue(keywords.contains(KEYWORDS1));
 		Assert.assertTrue(keywords.contains(KEYWORDS2));
 		Assert.assertFalse(keywords.contains(LOCALHOST));
@@ -118,6 +120,7 @@ public class EuropaPluginKeywordDetectionTest {
 		Assert.assertTrue(data.containsKey(KEYWORDS));
 		List<String> keywords = (List<String>) data.get(KEYWORDS);
 
+		Assert.assertTrue(keywords.size() == 2);
 		Assert.assertTrue(keywords.contains("maritimeaffairs"));
 		Assert.assertTrue(keywords.contains("press"));
 		Assert.assertFalse(keywords.contains("ec.europa.eu"));
@@ -150,6 +153,7 @@ public class EuropaPluginKeywordDetectionTest {
 		Assert.assertTrue(data.containsKey(KEYWORDS));
 		List<String> keywords = (List<String>) data.get(KEYWORDS);
 
+		Assert.assertTrue(keywords.size() == 2);
 		Assert.assertTrue(keywords.contains(KEYWORDS1));
 		Assert.assertTrue(keywords.contains(KEYWORDS2));
 		Assert.assertFalse(keywords.contains(LOCALHOST));
@@ -182,6 +186,7 @@ public class EuropaPluginKeywordDetectionTest {
 		Assert.assertTrue(data.containsKey(KEYWORDS));
 		List<String> keywords = (List<String>) data.get(KEYWORDS);
 
+		Assert.assertTrue(keywords.size() == 2);
 		Assert.assertTrue(keywords.contains(KEYWORDS1));
 		Assert.assertTrue(keywords.contains(KEYWORDS2));
 		Assert.assertFalse(keywords.contains(LOCALHOST));
@@ -240,6 +245,7 @@ public class EuropaPluginKeywordDetectionTest {
 		Assert.assertTrue(data.containsKey(KEYWORDS));
 		List<String> keywords = (List<String>) data.get(KEYWORDS);
 
+		Assert.assertTrue(keywords.size() == 2);
 		Assert.assertTrue(keywords.contains("the keyword 001"));
 		Assert.assertTrue(keywords.contains(KEYWORDS2));
 		Assert.assertFalse(keywords.contains(LOCALHOST));
