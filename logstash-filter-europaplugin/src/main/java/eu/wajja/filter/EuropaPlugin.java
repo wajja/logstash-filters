@@ -194,7 +194,7 @@ public class EuropaPlugin implements Filter {
 						}
 
 						if (keywordUrls.length > 0) {
-							eventData.put(METADATA_KEYWORDS, Arrays.asList(keywordUrls));
+							eventData.put(METADATA_KEYWORDS, Arrays.asList(keywordUrls).stream().filter(f -> !f.isEmpty()).collect(Collectors.toList()));
 						}
 					}
 
@@ -213,19 +213,24 @@ public class EuropaPlugin implements Filter {
 
 						for (int x = 0; x < languagesUrls.length; x++) {
 
-							String param = languagesUrls[x];
+							try {
+								String param = languagesUrls[x];
 
-							if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")..*")) {
-								param = param.replaceAll(".*_", "").substring(0, 2);
-								eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
+								if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")\\..*")) {
+									param = param.replaceAll(".*_", "").substring(0, 2);
+									eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
 
-							} else if (param.matches(ALLOWED_LANGUAGES)) {
-								eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
+								} else if (param.matches(ALLOWED_LANGUAGES)) {
+									eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
 
-							} else if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")")) {
-								param = param.replaceAll(".*_", "");
-								eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
+								} else if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")")) {
+									param = param.replaceAll(".*_", "");
+									eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
 
+								}
+
+							} catch (StringIndexOutOfBoundsException e) {
+								LOGGER.error("Failed to detect language from url {}", languagesUrl, e);
 							}
 						}
 					}
