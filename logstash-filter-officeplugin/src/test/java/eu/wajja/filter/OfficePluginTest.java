@@ -39,7 +39,12 @@ public class OfficePluginTest {
 		Map<String, Object> configValues = new HashMap<>();
 
 		Configuration config = new ConfigurationImpl(configValues);
-		configValues.put("metadata", Arrays.asList("META1=VALUE1", "META2=VALUE2"));
+		configValues.put(OfficePlugin.PROPERTY_METADATA_CUSTOM, new HashMap<String, Object>() {
+			{
+				put("META1", Arrays.asList("VALUE1"));
+				put("META2", Arrays.asList("VALUE2"));
+			}
+		});
 
 		OfficePlugin officeFilter = new OfficePlugin(UUID.randomUUID().toString(), config, null);
 
@@ -55,19 +60,16 @@ public class OfficePluginTest {
 		Collection<co.elastic.logstash.api.Event> results = officeFilter.filter(Collections.singletonList(e), null);
 		Assert.assertFalse(results.isEmpty());
 
-		results.stream().forEach(eee -> {
+		Map<String, Object> data = results.stream().findFirst().orElse(new Event()).getData();
+		Assert.assertTrue(data.containsKey("TITLE"));
+		Assert.assertTrue(data.get("DATE").equals("2015-10-01T07:08:00Z"));
+		Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
 
-			Map<String, Object> data = eee.getData();
-			Assert.assertTrue(data.containsKey("TITLE"));
-			Assert.assertTrue(data.get("DATE").equals("2015-10-01T07:08:00Z"));
-			Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+		Map<String, List<String>> metadata = ((Map<String, List<String>>) data.get(OfficePlugin.PROPERTY_METADATA));
+		Assert.assertTrue(metadata.containsKey("META1") && metadata.get("META1").get(0).equals("VALUE1"));
+		Assert.assertTrue(metadata.containsKey("META2") && metadata.get("META2").get(0).equals("VALUE2"));
 
-			Map<String, List<String>> metadata = ((Map<String, List<String>>) data.get("metadata"));
-			Assert.assertTrue(metadata.containsKey("META1") && metadata.get("META1").get(0).equals("VALUE1"));
-			Assert.assertTrue(metadata.containsKey("META2") && metadata.get("META2").get(0).equals("VALUE2"));
-
-			Assert.assertFalse(data.containsKey("languages"));
-		});
+		Assert.assertFalse(data.containsKey("languages"));
 
 	}
 
@@ -77,7 +79,12 @@ public class OfficePluginTest {
 		Map<String, Object> configValues = new HashMap<>();
 
 		Configuration config = new ConfigurationImpl(configValues);
-		configValues.put("metadata", Arrays.asList("META1=VALUE1", "META2=VALUE2"));
+		configValues.put(OfficePlugin.PROPERTY_METADATA_CUSTOM, new HashMap<String, Object>() {
+			{
+				put("META1", Arrays.asList("VALUE1"));
+				put("META2", Arrays.asList("VALUE2"));
+			}
+		});
 
 		OfficePlugin officeFilter = new OfficePlugin(UUID.randomUUID().toString(), config, null);
 
@@ -93,19 +100,16 @@ public class OfficePluginTest {
 		Collection<co.elastic.logstash.api.Event> results = officeFilter.filter(Collections.singletonList(e), null);
 		Assert.assertFalse(results.isEmpty());
 
-		results.stream().forEach(eee -> {
+		Map<String, Object> data = results.stream().findFirst().orElse(new Event()).getData();
+		Assert.assertTrue(data.containsKey("TITLE"));
+		Assert.assertTrue(data.get("DATE").equals("2015-03-23T15:19:00Z"));
+		Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
 
-			Map<String, Object> data = eee.getData();
-			Assert.assertTrue(data.containsKey("TITLE"));
-			Assert.assertTrue(data.get("DATE").equals("2015-03-23T15:19:00Z"));
-			Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+		Map<String, List<String>> metadata = ((Map<String, List<String>>) data.get(OfficePlugin.PROPERTY_METADATA));
+		Assert.assertTrue(metadata.containsKey("META1") && metadata.get("META1").get(0).equals("VALUE1"));
+		Assert.assertTrue(metadata.containsKey("META2") && metadata.get("META2").get(0).equals("VALUE2"));
 
-			Map<String, List<String>> metadata = ((Map<String, List<String>>) data.get("metadata"));
-			Assert.assertTrue(metadata.containsKey("META1") && metadata.get("META1").get(0).equals("VALUE1"));
-			Assert.assertTrue(metadata.containsKey("META2") && metadata.get("META2").get(0).equals("VALUE2"));
-
-			Assert.assertTrue(((List<String>) data.get("languages")).get(0).equals("da"));
-		});
+		Assert.assertTrue(((List<String>) data.get("languages")).get(0).equals("da"));
 
 	}
 
@@ -115,7 +119,12 @@ public class OfficePluginTest {
 		Map<String, Object> configValues = new HashMap<>();
 
 		Configuration config = new ConfigurationImpl(configValues);
-		configValues.put("metadata", Arrays.asList("META1=VALUE1", "META2=VALUE2"));
+		configValues.put(OfficePlugin.PROPERTY_METADATA_CUSTOM, new HashMap<String, Object>() {
+			{
+				put("META1", Arrays.asList("VALUE1"));
+				put("META2", Arrays.asList("VALUE2"));
+			}
+		});
 
 		OfficePlugin officeFilter = new OfficePlugin(UUID.randomUUID().toString(), config, null);
 
@@ -131,25 +140,27 @@ public class OfficePluginTest {
 		Collection<co.elastic.logstash.api.Event> results = officeFilter.filter(Collections.singletonList(e), null);
 		Assert.assertFalse(results.isEmpty());
 
-		results.stream().forEach(eee -> {
+		Map<String, Object> data = results.stream().findFirst().orElse(new Event()).getData();
+		Assert.assertTrue(data.containsKey("TITLE"));
 
-			Map<String, Object> data = eee.getData();
-			Assert.assertTrue(data.containsKey("TITLE"));
-			
-			String title = data.get("TITLE").toString();
-			Assert.assertTrue(title.equals("A Target Cross-linking Tool"));
-		});
+		String title = data.get("TITLE").toString();
+		Assert.assertTrue(title.equals("A Target Cross-linking Tool"));
 
 	}
-	
+
 	@Test
 	public void filter4Test() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 
 		Configuration config = new ConfigurationImpl(configValues);
-		configValues.put("metadata", Arrays.asList("META1=VALUE1", "META2=VALUE2"));
-
+		configValues.put(OfficePlugin.PROPERTY_METADATA_CUSTOM, new HashMap<String, Object>() {
+			{
+				put("META1", Arrays.asList("VALUE1"));
+				put("META2", Arrays.asList("VALUE2"));
+			}
+		});
+		
 		OfficePlugin officeFilter = new OfficePlugin(UUID.randomUUID().toString(), config, null);
 
 		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("application_word_3.docx");
@@ -164,25 +175,26 @@ public class OfficePluginTest {
 		Collection<co.elastic.logstash.api.Event> results = officeFilter.filter(Collections.singletonList(e), null);
 		Assert.assertFalse(results.isEmpty());
 
-		results.stream().forEach(eee -> {
+		Map<String, Object> data = results.stream().findFirst().orElse(new Event()).getData();
+		Assert.assertTrue(data.containsKey("TITLE"));
 
-			Map<String, Object> data = eee.getData();
-			Assert.assertTrue(data.containsKey("TITLE"));
-			
-			String title = data.get("TITLE").toString();
-			Assert.assertTrue(title.equals("mtr_country_reports"));
-		});
+		String title = data.get("TITLE").toString();
+		Assert.assertTrue(title.equals("mtr_country_reports"));
 
 	}
-	
-	
+
 	@Test
 	public void filterContentDispositionWordDocTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 
 		Configuration config = new ConfigurationImpl(configValues);
-		configValues.put("metadata", Arrays.asList("META1=VALUE1", "META2=VALUE2"));
+		configValues.put(OfficePlugin.PROPERTY_METADATA_CUSTOM, new HashMap<String, Object>() {
+			{
+				put("META1", Arrays.asList("VALUE1"));
+				put("META2", Arrays.asList("VALUE2"));
+			}
+		});
 
 		OfficePlugin officeFilter = new OfficePlugin(UUID.randomUUID().toString(), config, null);
 
@@ -199,17 +211,12 @@ public class OfficePluginTest {
 		Collection<co.elastic.logstash.api.Event> results = officeFilter.filter(Collections.singletonList(e), null);
 		Assert.assertFalse(results.isEmpty());
 
-		results.stream().forEach(eee -> {
-
-			Map<String, Object> data = eee.getData();
-			String title = data.get("TITLE").toString();
-			Assert.assertTrue(title.equals("my word document"));
-			Assert.assertTrue(data.get("DATE").equals("2018-01-27T20:48:00Z"));
-			Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
-
-		});
+		Map<String, Object> data = results.stream().findFirst().orElse(new Event()).getData();
+		String title = data.get("TITLE").toString();
+		Assert.assertTrue(title.equals("my word document"));
+		Assert.assertTrue(data.get("DATE").equals("2018-01-27T20:48:00Z"));
+		Assert.assertTrue(data.get("CONTENT-TYPE").equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
 
 	}
-	
 
 }

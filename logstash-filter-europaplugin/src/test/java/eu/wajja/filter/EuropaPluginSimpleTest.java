@@ -144,7 +144,7 @@ public class EuropaPluginSimpleTest {
 
 	@SuppressWarnings("unchecked")
 	@Test
-	public void filterCustomMetadata1FilterTest() throws IOException {
+	public void filtermetadataCustom1FilterTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 
@@ -156,7 +156,7 @@ public class EuropaPluginSimpleTest {
 		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
 		map.put("http://#2", Arrays.asList("VALUE3"));
 
-		configValues.put("customMetadata", map);
+		configValues.put("metadataCustom", map);
 
 		Configuration config = new ConfigurationImpl(configValues);
 
@@ -186,7 +186,7 @@ public class EuropaPluginSimpleTest {
 
 	@SuppressWarnings("unchecked")
 	@Test
-	public void filterCustomMetadata2FilterTest() throws IOException {
+	public void filtermetadataCustom2FilterTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 
@@ -198,7 +198,7 @@ public class EuropaPluginSimpleTest {
 		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
 		map.put("http://#2", Arrays.asList("VALUE3"));
 
-		configValues.put("customMetadata", map);
+		configValues.put("metadataCustom", map);
 
 		Configuration config = new ConfigurationImpl(configValues);
 
@@ -226,7 +226,7 @@ public class EuropaPluginSimpleTest {
 	}
 
 	@Test
-	public void filterCustomMetadata3FilterTest() throws IOException {
+	public void filtermetadataCustom3FilterTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
 
@@ -238,7 +238,7 @@ public class EuropaPluginSimpleTest {
 		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
 		map.put("http://#2", Arrays.asList("VALUE3"));
 
-		configValues.put("customMetadata", map);
+		configValues.put("metadataCustom", map);
 
 		Configuration config = new ConfigurationImpl(configValues);
 

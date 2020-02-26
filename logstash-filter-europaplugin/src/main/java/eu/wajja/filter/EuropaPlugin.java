@@ -49,7 +49,7 @@ public class EuropaPlugin implements Filter {
 	private final Tika tika = new Tika();
 
 	private static final String PROPERTY_DATA_FOLDER = "dataFolder";
-	private static final String PROPERTY_CUSTOM_METADATA = "customMetadata";
+	private static final String PROPERTY_CUSTOM_METADATA = "metadataCustom";
 	private static final String PROPERTY_SIMPLIFIED_CONTENT_TYPE = "simplifiedContentType";
 
 	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);

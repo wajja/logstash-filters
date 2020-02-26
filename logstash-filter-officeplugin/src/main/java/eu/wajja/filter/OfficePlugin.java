@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.tika.Tika;
@@ -43,15 +42,14 @@ public class OfficePlugin implements Filter {
 
 	private final Tika tika = new Tika();
 
-	private static final String PROPERTY_DATA_FOLDER = "dataFolder";
-	private static final String PROPERTY_METADATA = "metadata";
-	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
-	public static final PluginConfigSpec<List<Object>> CONFIG_METADATA = PluginConfigSpec.arraySetting(PROPERTY_METADATA);
+	protected static final String PROPERTY_METADATA = "metadata";
+	protected static final String PROPERTY_METADATA_CUSTOM = "metadataCustom";
+
+	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_CUSTOM = PluginConfigSpec.hashSetting(PROPERTY_METADATA_CUSTOM, new HashMap<String, Object>(), false, false);
 
 	private static final String METADATA_TITLE = "TITLE";
 	private static final String METADATA_DATE = "DATE";
 	private static final String METADATA_CONTENT_TYPE = "CONTENT-TYPE";
-
 	private static final String METADATA_URL = "url";
 	private static final String METADATA_CONTENT = "content";
 	private static final String METADATA_TYPE = "type";
@@ -60,9 +58,8 @@ public class OfficePlugin implements Filter {
 	private static final String METADATA_CONTENT_DISPOSITION = "Content-Disposition";
 
 	private String threadId;
-	private String dataFolder;
 	private LanguageDetector detector;
-	private Map<String, List<String>> metadataMap = new HashMap<>();
+	private Map<String, Object> metadataCustom;
 
 	/**
 	 * Mandatory constructor
@@ -80,15 +77,7 @@ public class OfficePlugin implements Filter {
 
 		this.threadId = id;
 		this.detector = new OptimaizeLangDetector().loadModels();
-
-		if (config.contains(CONFIG_METADATA)) {
-
-			config.get(CONFIG_METADATA).stream().forEach(c -> {
-
-				String metadataString = (String) c;
-				metadataMap.put(metadataString.split("=")[0], Arrays.asList(metadataString.substring(metadataString.split("=")[0].length() + 1)));
-			});
-		}
+		this.metadataCustom = config.get(CONFIG_METADATA_CUSTOM);
 	}
 
 	/**
@@ -96,7 +85,7 @@ public class OfficePlugin implements Filter {
 	 */
 	@Override
 	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_METADATA);
+		return Arrays.asList(CONFIG_METADATA_CUSTOM);
 	}
 
 	@Override
@@ -130,7 +119,7 @@ public class OfficePlugin implements Filter {
 					eventData.put(METADATA_TYPE, type);
 				}
 
-				// Only parse HTML here
+				// Only parse Office Docs here
 
 				if (type.contains("office") || type.contains("msword")) {
 
@@ -214,8 +203,8 @@ public class OfficePlugin implements Filter {
 						 * Add Metadata Field
 						 */
 
-						if (!metadataMap.isEmpty()) {
-							eventData.put(PROPERTY_METADATA, metadataMap);
+						if (!metadataCustom.isEmpty()) {
+							eventData.put(PROPERTY_METADATA, metadataCustom);
 						}
 
 					} catch (Exception e) {
