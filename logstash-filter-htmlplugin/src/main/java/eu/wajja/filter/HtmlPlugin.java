@@ -152,30 +152,32 @@ public class HtmlPlugin implements Filter {
 					try {
 
 						/**
-						 * Extracts the content if needed
+						 * Metadata Extraction
 						 */
 
 						Document document = Jsoup.parse(new String(bytes));
 						Elements metadataElements = document.getElementsByTag("meta");
-
-						/**
-						 * Metadata Extraction
-						 */
-
+						
 						/** Extract all metadata fields **/
 						Map<String, Object> metadata = new HashMap<>();
+						Map<String, Object> extractedMetadata = new HashMap<>();
 						
-						metadataElements.stream().filter(m -> m.hasAttr("name") && m.hasAttr(METADATA_CONTENT)).forEach(m -> metadata.put(m.attr("name"), Arrays.asList(m.attr(METADATA_CONTENT))));
-						metadataElements.stream().filter(m -> m.hasAttr("property") && m.hasAttr(METADATA_CONTENT)).forEach(m -> metadata.put(m.attr("property"), Arrays.asList(m.attr(METADATA_CONTENT))));
-
+						metadataElements.stream()
+							.filter(m -> m.hasAttr("name") && m.hasAttr(METADATA_CONTENT))
+							.forEach(m -> extractedMetadata.put(m.attr("name"), Arrays.asList(m.attr(METADATA_CONTENT))));
+						
+						metadataElements.stream()
+							.filter(m -> m.hasAttr("property") && m.hasAttr(METADATA_CONTENT))
+							.forEach(m -> extractedMetadata.put(m.attr("property"), Arrays.asList(m.attr(METADATA_CONTENT))));
+						
 						/** Add the custom metadata **/
 						this.metadataCustom.entrySet().stream().forEach(m -> metadata.put(m.getKey(), Arrays.asList((String) m.getValue())));
 
 						/** Map the custom metadata **/
 						this.metadataMapping.entrySet().stream().forEach(m -> {
 
-							if (metadata.containsKey(m.getValue())) {
-								metadata.put(m.getKey(), metadata.get(m.getValue()));
+							if (extractedMetadata.containsKey(m.getValue())) {
+								metadata.put(m.getKey(), extractedMetadata.get(m.getValue()));
 							}
 
 						});
@@ -196,6 +198,14 @@ public class HtmlPlugin implements Filter {
 							}
 
 						}
+
+						/**
+						 * Add HTML meta to the event
+						 */
+
+						extractedMetadata.entrySet().stream()
+								.filter(m -> eventData.entrySet().stream().noneMatch(e -> e.getKey().equals(m.getKey())))
+								.forEach(m -> eventData.put(m.getKey(), Arrays.asList(m.getValue())));
 
 						/**
 						 * Title extraction
@@ -238,6 +248,7 @@ public class HtmlPlugin implements Filter {
 					}
 
 				}
+
 			}
 
 		});

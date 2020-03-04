@@ -182,6 +182,50 @@ public class HtmlPluginTest {
 	}
 
 	@Test
+	public void filterHtmlReferenceTest() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		Map<String, String> regexSet = new HashMap<>();
+		regexSet.put("TITLE", "dcterms.title");
+		regexSet.put("SITENAME", "og:site_name");
+		regexSet.put("DATE", "article:published_time");
+		regexSet.put("KEYWORDS", "keywords");
+
+		configValues.put(HtmlPlugin.PROPERTY_METADATA_MAPPING, regexSet);
+
+		Map<String, Object> map = new HashMap<>();
+		map.put("SOURCE", "EC-EUROPA-EU-BELGIUM");
+		map.put("SITENAME", "Belgium");
+		map.put("SITEDESCRIPTION", "Vertegenwoordiging in België");
+		map.put("SITEURL", "https://ec.europa.eu/belgium/home_nl");
+
+		configValues.put(HtmlPlugin.PROPERTY_METADATA_MAPPING, map);
+
+		Configuration config = new ConfigurationImpl(configValues);
+		HtmlPlugin htmlFilter = new HtmlPlugin(THREAD_ID, config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("html_page_2.html");
+		String encodedContent = java.util.Base64.getEncoder().encodeToString(IOUtils.toByteArray(inputStream));
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField(HtmlPlugin.METADATA_REFERENCE, HtmlPlugin.METADATA_REFERENCE);
+		e.setField(HtmlPlugin.METADATA_CONTENT, encodedContent);
+		e.setField(HtmlPlugin.METADATA_URL, LOCALHOST);
+
+		Collection<co.elastic.logstash.api.Event> results = htmlFilter.filter(Collections.singletonList(e), null);
+
+		Assert.assertFalse(results.isEmpty());
+		Map<String, Object> data = results.stream().findFirst().orElse(new Event()).getData();
+		
+		Assert.assertTrue(data.containsKey(HtmlPlugin.METADATA_REFERENCE));
+		String reference = data.get(HtmlPlugin.METADATA_REFERENCE).toString();
+		Assert.assertTrue(reference.equals(HtmlPlugin.METADATA_REFERENCE));
+
+	}
+
+	@Test
 	public void filterHtmlTitleFromRegex1Test() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
