@@ -274,8 +274,10 @@ public class EuropaPlugin implements Filter {
 					 * DATE
 					 */
 
-					String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(new Date());
-					eventData.put(METADATA_DATE, Arrays.asList(date));
+					if (!eventData.containsKey(METADATA_DATE)) {
+						String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(new Date());
+						eventData.put(METADATA_DATE, Arrays.asList(date));
+					}
 
 				} catch (IOException e) {
 					LOGGER.error("Failed to detect content type", e);

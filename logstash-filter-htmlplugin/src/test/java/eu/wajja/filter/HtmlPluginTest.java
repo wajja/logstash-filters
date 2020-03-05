@@ -180,6 +180,41 @@ public class HtmlPluginTest {
 		Assert.assertTrue(title.equals("[2016-11-23T15:57:29+01:00]"));
 
 	}
+	
+	@Test
+	public void filterHtmlDate1Test() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		configValues.put(HtmlPlugin.PROPERTY_METADATA_MAPPING, regexSet1);
+
+		Map<String, Object> map = new HashMap<>();
+		map.put("DATE", "article:published_time");
+		configValues.put(HtmlPlugin.PROPERTY_METADATA_MAPPING, map);
+
+		Configuration config = new ConfigurationImpl(configValues);
+		HtmlPlugin htmlFilter = new HtmlPlugin(THREAD_ID, config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("html_page_3.html");
+		String encodedContent = java.util.Base64.getEncoder().encodeToString(IOUtils.toByteArray(inputStream));
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField(HtmlPlugin.METADATA_REFERENCE, HtmlPlugin.METADATA_REFERENCE);
+		e.setField(HtmlPlugin.METADATA_CONTENT, encodedContent);
+		e.setField(HtmlPlugin.METADATA_URL, LOCALHOST);
+
+		Collection<co.elastic.logstash.api.Event> results = htmlFilter.filter(Collections.singletonList(e), null);
+
+		Assert.assertFalse(results.isEmpty());
+		Map<String, Object> data = results.stream().findFirst().orElse(new Event()).getData();
+
+		Assert.assertTrue(data.containsKey("DATE"));
+
+		String title = data.get("DATE").toString();
+		Assert.assertTrue(title.equals("[2016-05-04T15:25:45+02:00]"));
+
+	}
 
 	@Test
 	public void filterHtmlReferenceTest() throws IOException {
