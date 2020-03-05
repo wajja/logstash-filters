@@ -51,10 +51,8 @@ public class EuropaPlugin implements Filter {
 	private static final String PROPERTY_DATA_FOLDER = "dataFolder";
 	private static final String PROPERTY_CUSTOM_METADATA = "metadataCustom";
 	private static final String PROPERTY_SIMPLIFIED_CONTENT_TYPE = "simplifiedContentType";
-
-	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<String, Object>(), false, false);
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_SIMPLIFIED_CONTENT_TYPE = PluginConfigSpec.hashSetting(PROPERTY_SIMPLIFIED_CONTENT_TYPE, new HashMap<String, Object>(), false, false);
+	private static final String PROPERTY_BEST_BET_URLS = "bestBetUrls";
+	private static final String PROPERTY_BEST_BET_FIELD = "bestBetField";
 
 	private static final String ALLOWED_LANGUAGES = "(be)|(bg)|(bs)|(ca)|(cs)|(cy)|(da)|(de)|(el)|(en)|(es)|(et)|(eu)|(fi)|(fr)|(ga)|(hr)|(hu)|(is)|(it)|(lb)|(lt)|(lv)|(mk)|(mt)|(nl)|(no)|(pl)|(pt)|(ro)|(ru)|(sk)|(sl)|(sq)|(sr)|(sv)|(tr)|(uk)";
 	private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE";
@@ -67,6 +65,12 @@ public class EuropaPlugin implements Filter {
 	private static final String METADATA_KEYWORDS = "KEYWORDS";
 	private static final String METADATA_LANGUAGES = "languages";
 
+	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
+	private static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<String, Object>(), false, false);
+	private static final PluginConfigSpec<Map<String, Object>> CONFIG_SIMPLIFIED_CONTENT_TYPE = PluginConfigSpec.hashSetting(PROPERTY_SIMPLIFIED_CONTENT_TYPE, new HashMap<String, Object>(), false, false);
+	private static final PluginConfigSpec<Map<String, Object>> CONFIG_BEST_BET_URLS = PluginConfigSpec.hashSetting(PROPERTY_BEST_BET_URLS, new HashMap<String, Object>(), false, false);
+	private static final PluginConfigSpec<String> CONFIG_BEST_BET_FIELD = PluginConfigSpec.stringSetting(PROPERTY_BEST_BET_FIELD, METADATA_SITETITLE);
+
 	private String threadId;
 	private Map<String, String> mapGeneralFilters;
 	private Map<String, String> mapGeneralFiltersIds;
@@ -74,6 +78,8 @@ public class EuropaPlugin implements Filter {
 	private Map<String, String> mapRestrictedFilters;
 	private Map<String, Object> customMetadata;
 	private Map<String, Object> simplifiedContentType;
+	private Map<String, Object> bestBetUrls;
+	private String bestBetField;
 
 	/**
 	 * Mandatory constructor
@@ -94,6 +100,8 @@ public class EuropaPlugin implements Filter {
 		String dataFolder = config.get(CONFIG_DATA_FOLDER) + "/europa-data/";
 		this.customMetadata = config.get(CONFIG_CUSTOM_METADATA);
 		this.simplifiedContentType = config.get(CONFIG_SIMPLIFIED_CONTENT_TYPE);
+		this.bestBetField = config.get(CONFIG_BEST_BET_FIELD);
+		this.bestBetUrls = config.get(CONFIG_BEST_BET_URLS);
 
 		/**
 		 * General Filters
@@ -140,7 +148,7 @@ public class EuropaPlugin implements Filter {
 	 */
 	@Override
 	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA, CONFIG_SIMPLIFIED_CONTENT_TYPE);
+		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA, CONFIG_SIMPLIFIED_CONTENT_TYPE, CONFIG_BEST_BET_FIELD, CONFIG_BEST_BET_URLS);
 	}
 
 	@Override
@@ -275,21 +283,27 @@ public class EuropaPlugin implements Filter {
 
 			}
 
+			/**
+			 * Add the configured metadata
+			 */
+			customMetadata.entrySet().stream().forEach(entry -> eventData.put(entry.getKey(), entry.getValue()));
+
+			/**
+			 * Mapping URLS to BestBets
+			 */
 			if (eventData.containsKey(METADATA_URL)) {
 
 				String url = eventData.get(METADATA_URL).toString();
 
-				if (this.customMetadata.containsKey(url)) {
+				if (this.bestBetUrls.containsKey(url)) {
 
-					if (this.customMetadata.get(url) instanceof String[]) {
-
-						String[] values = (String[]) this.customMetadata.get(url);
-						eventData.put(METADATA_SITETITLE, Arrays.asList(values));
+					if (this.bestBetUrls.get(url) instanceof String[]) {
+						String[] values = (String[]) this.bestBetUrls.get(url);
+						eventData.put(bestBetField, Arrays.asList(values));
 
 					} else {
-
-						List<String> values = (List<String>) this.customMetadata.get(url);
-						eventData.put(METADATA_SITETITLE, values);
+						List<String> values = (List<String>) this.bestBetUrls.get(url);
+						eventData.put(bestBetField, values);
 					}
 
 				}

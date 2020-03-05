@@ -156,7 +156,7 @@ public class EuropaPluginSimpleTest {
 		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
 		map.put("http://#2", Arrays.asList("VALUE3"));
 
-		configValues.put("metadataCustom", map);
+		configValues.put("bestBetUrls", map);
 
 		Configuration config = new ConfigurationImpl(configValues);
 
@@ -198,7 +198,7 @@ public class EuropaPluginSimpleTest {
 		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
 		map.put("http://#2", Arrays.asList("VALUE3"));
 
-		configValues.put("metadataCustom", map);
+		configValues.put("bestBetUrls", map);
 
 		Configuration config = new ConfigurationImpl(configValues);
 
