@@ -47,6 +47,7 @@ apply plugin: 'com.github.johnrengelman.shadow'
 
 shadowJar {
     classifier = null
+    zip64 true
 }
 
 dependencies {
@@ -60,8 +61,11 @@ dependencies {
    	compile group: 'org.jruby', name: 'jruby-complete', version: '9.2.8.0'
 	compile group: 'org.apache.tika', name: 'tika-parsers', version: '1.22'
 	compile group: 'org.apache.tika', name: 'tika-langdetect', version: '1.22'
+	compile group: 'org.seleniumhq.selenium', name: 'selenium-chrome-driver', version: '4.0.0-alpha-3'
+   	compile group: 'com.machinepublishers', name: 'jbrowserdriver', version: '1.1.0-RC2'
 	compile fileTree(dir: LOGSTASH_CORE_PATH, include: "**/logstash-core-?.?.?.jar")
-
+	
+	testCompile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
     testCompile 'junit:junit:4.12'
     testCompile 'org.jruby:jruby-complete:9.1.13.0'
 }

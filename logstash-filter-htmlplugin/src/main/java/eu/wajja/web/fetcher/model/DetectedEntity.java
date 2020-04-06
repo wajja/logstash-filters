@@ -1,4 +1,4 @@
-package eu.wajja.filter;
+package eu.wajja.web.fetcher.model;
 
 public class DetectedEntity {
 
