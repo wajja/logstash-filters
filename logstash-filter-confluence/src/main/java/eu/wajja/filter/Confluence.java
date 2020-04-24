@@ -1,18 +1,22 @@
 package eu.wajja.filter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.tika.Tika;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.langdetect.OptimaizeLangDetector;
 import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Whitelist;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,6 +133,8 @@ public class Confluence implements Filter {
 			if (eventData.containsKey(METADATA_URL) && eventData.containsKey(METADATA_CONTENT) && eventData.get(METADATA_CONTENT_TYPE).toString().startsWith("confluence")) {
 
 				String url = eventData.get(METADATA_URL).toString();
+				String confluenceContentType = eventData.get(METADATA_CONTENT_TYPE).toString();
+
 				LOGGER.info("Parsing Confluence filter METADATA_URL -> {}", url);
 
 				eventData.put(METADATA_MAP_AUTHOR, eventData.get(METADATA_MODIFIED_USER).toString());
@@ -157,6 +163,24 @@ public class Confluence implements Filter {
 				byte[] bytes = Base64.getDecoder().decode(contentString);
 				String type = tika.detect(bytes);
 				eventData.put(METADATA_MAP_CONTENT_TYPE, type);
+
+				/**
+				 * Clean up HTML
+				 */
+
+				if (confluenceContentType.equals("confluence/page")) {
+
+					try {
+						
+						String content = IOUtils.toString(bytes, StandardCharsets.UTF_8.name());
+						content = Jsoup.clean(content, Whitelist.none());
+						eventData.put(METADATA_CONTENT, Base64.getEncoder().encodeToString(content.getBytes()));
+
+					} catch (IOException e) {
+						LOGGER.error("Failed to parse content", e);
+					}
+
+				}
 
 				/**
 				 * Add the configured metadata
