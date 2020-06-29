@@ -144,10 +144,14 @@ public class Confluence implements Filter {
 
 				if (eventData.containsKey(METADATA_PARENT_NAME)) {
 					eventData.put(METADATA_MAP_PAGENAME, eventData.get(METADATA_PARENT_NAME).toString());
+				}else {
+					eventData.put(METADATA_MAP_PAGENAME, eventData.get(METADATA_REFERENCE).toString());
 				}
 
 				if (eventData.containsKey(METADATA_PARENT_URL)) {
 					eventData.put(METADATA_MAP_PAGEURI, eventData.get(METADATA_PARENT_URL).toString());
+				}else {
+					eventData.put(METADATA_MAP_PAGEURI, eventData.get(METADATA_URL).toString());
 				}
 
 				eventData.put(METADATA_MAP_SPACEURI, eventData.get(METADATA_SPACE_URL).toString());
