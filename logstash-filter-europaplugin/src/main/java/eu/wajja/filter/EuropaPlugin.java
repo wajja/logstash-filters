@@ -2,7 +2,12 @@ package eu.wajja.filter;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.Proxy;
+import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -18,10 +23,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.map.HashedMap;
+import org.apache.commons.io.IOUtils;
 import org.apache.tika.Tika;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +62,14 @@ public class EuropaPlugin implements Filter {
 	private static final String PROPERTY_SIMPLIFIED_CONTENT_TYPE = "simplifiedContentType";
 	private static final String PROPERTY_BEST_BET_URLS = "bestBetUrls";
 	private static final String PROPERTY_BEST_BET_FIELD = "bestBetField";
+	private static final String PROPERTY_METADATA_URL = "metadataUrl";
+	private static final String PROPERTY_TIMEOUT = "timeout";
+	private static final String PROPERTY_PROXY_HOST = "proxyHost";
+	private static final String PROPERTY_PROXY_PORT = "proxyPort";
+	private static final String PROPERTY_PROXY_USER = "proxyUser";
+	private static final String PROPERTY_PROXY_PASS = "proxyPass";
+	private static final String PROPERTY_CRAWLER_USER_AGENT = "crawlerUserAgent";
+	private static final String PROPERTY_CRAWLER_REFERER = "crawlerReferer";
 
 	private static final String ALLOWED_LANGUAGES = "(be)|(bg)|(bs)|(ca)|(cs)|(cy)|(da)|(de)|(el)|(en)|(es)|(et)|(eu)|(fi)|(fr)|(ga)|(hr)|(hu)|(is)|(it)|(lb)|(lt)|(lv)|(mk)|(mt)|(nl)|(no)|(pl)|(pt)|(ro)|(ru)|(sk)|(sl)|(sq)|(sr)|(sv)|(tr)|(uk)";
 	private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE";
@@ -64,12 +81,22 @@ public class EuropaPlugin implements Filter {
 	private static final String METADATA_DATE = "DATE";
 	private static final String METADATA_KEYWORDS = "KEYWORDS";
 	private static final String METADATA_LANGUAGES = "languages";
+	private static final String METADATA_TITLE = "TITLE";
 
 	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
 	private static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<String, Object>(), false, false);
 	private static final PluginConfigSpec<Map<String, Object>> CONFIG_SIMPLIFIED_CONTENT_TYPE = PluginConfigSpec.hashSetting(PROPERTY_SIMPLIFIED_CONTENT_TYPE, new HashMap<String, Object>(), false, false);
 	private static final PluginConfigSpec<Map<String, Object>> CONFIG_BEST_BET_URLS = PluginConfigSpec.hashSetting(PROPERTY_BEST_BET_URLS, new HashMap<String, Object>(), false, false);
 	private static final PluginConfigSpec<String> CONFIG_BEST_BET_FIELD = PluginConfigSpec.stringSetting(PROPERTY_BEST_BET_FIELD, METADATA_SITETITLE);
+	private static final PluginConfigSpec<String> CONFIG_METADATA_URL = PluginConfigSpec.stringSetting(PROPERTY_METADATA_URL, null, false, false);
+
+	public static final PluginConfigSpec<Long> CONFIG_TIMEOUT = PluginConfigSpec.numSetting(PROPERTY_TIMEOUT, 8000);
+	public static final PluginConfigSpec<String> CONFIG_PROXY_HOST = PluginConfigSpec.stringSetting(PROPERTY_PROXY_HOST);
+	public static final PluginConfigSpec<Long> CONFIG_PROXY_PORT = PluginConfigSpec.numSetting(PROPERTY_PROXY_PORT, 80);
+	public static final PluginConfigSpec<String> CONFIG_PROXY_USER = PluginConfigSpec.stringSetting(PROPERTY_PROXY_USER);
+	public static final PluginConfigSpec<String> CONFIG_PROXY_PASS = PluginConfigSpec.stringSetting(PROPERTY_PROXY_PASS);
+	public static final PluginConfigSpec<String> CONFIG_CRAWLER_USER_AGENT = PluginConfigSpec.stringSetting(PROPERTY_CRAWLER_USER_AGENT, "Wajja Europa Plugin");
+	public static final PluginConfigSpec<String> CONFIG_CRAWLER_REFERER = PluginConfigSpec.stringSetting(PROPERTY_CRAWLER_REFERER, "http://wajja.eu/");
 
 	private String threadId;
 	private Map<String, String> mapGeneralFilters;
@@ -80,6 +107,12 @@ public class EuropaPlugin implements Filter {
 	private Map<String, Object> simplifiedContentType;
 	private Map<String, Object> bestBetUrls;
 	private String bestBetField;
+	private String metadataUrl;
+	private Proxy proxy;
+	private Long timeout;
+	private String userAgent;
+	private String referer;
+	private ProxyController proxyController;
 
 	/**
 	 * Mandatory constructor
@@ -102,6 +135,12 @@ public class EuropaPlugin implements Filter {
 		this.simplifiedContentType = config.get(CONFIG_SIMPLIFIED_CONTENT_TYPE);
 		this.bestBetField = config.get(CONFIG_BEST_BET_FIELD);
 		this.bestBetUrls = config.get(CONFIG_BEST_BET_URLS);
+		this.metadataUrl = config.get(CONFIG_METADATA_URL);
+		this.timeout = config.get(CONFIG_TIMEOUT);
+		this.referer = config.get(CONFIG_CRAWLER_REFERER);
+		this.userAgent = config.get(CONFIG_CRAWLER_USER_AGENT);
+
+		proxyController = new ProxyController(config.get(CONFIG_PROXY_USER), config.get(CONFIG_PROXY_PASS), config.get(CONFIG_PROXY_HOST), config.get(CONFIG_PROXY_PORT), false);
 
 		/**
 		 * General Filters
@@ -148,7 +187,8 @@ public class EuropaPlugin implements Filter {
 	 */
 	@Override
 	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA, CONFIG_SIMPLIFIED_CONTENT_TYPE, CONFIG_BEST_BET_FIELD, CONFIG_BEST_BET_URLS);
+		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA, CONFIG_SIMPLIFIED_CONTENT_TYPE, CONFIG_BEST_BET_FIELD, CONFIG_BEST_BET_URLS, CONFIG_METADATA_URL, CONFIG_TIMEOUT, CONFIG_PROXY_HOST, CONFIG_PROXY_PORT, CONFIG_PROXY_USER, CONFIG_PROXY_PASS, CONFIG_CRAWLER_USER_AGENT,
+				CONFIG_CRAWLER_REFERER);
 	}
 
 	@Override
@@ -279,6 +319,50 @@ public class EuropaPlugin implements Filter {
 						eventData.put(METADATA_DATE, Arrays.asList(date));
 					}
 
+					/**
+					 * Extra metadata from url
+					 */
+
+					if (this.metadataUrl != null && !this.metadataUrl.isEmpty()) {
+
+						String httpUrl = url.replace("https", "http");
+						HttpURLConnection httpURLConnection = null;
+
+						try {
+
+							URL fullUrl = new URL(this.metadataUrl + httpUrl);
+
+							LOGGER.info("Extracting metadata from {}", fullUrl);
+
+							if (proxy == null) {
+								httpURLConnection = (HttpURLConnection) fullUrl.openConnection();
+							} else {
+								httpURLConnection = (HttpURLConnection) fullUrl.openConnection(proxy);
+							}
+
+							httpURLConnection.setConnectTimeout(timeout.intValue());
+							httpURLConnection.setReadTimeout(timeout.intValue());
+							httpURLConnection.addRequestProperty("Accept-Language", "en-US,en;q=0.8");
+							httpURLConnection.addRequestProperty("User-Agent", userAgent);
+							httpURLConnection.addRequestProperty("Referer", referer);
+
+							httpURLConnection.connect();
+
+							if (httpURLConnection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+								extractMetadata(eventData, httpURLConnection, fullUrl);
+							}
+
+						} catch (Exception e) {
+							LOGGER.error("Failed to retrieve metadata for url : {}", httpUrl);
+
+						} finally {
+
+							if (httpURLConnection != null) {
+								httpURLConnection.disconnect();
+							}
+						}
+					}
+
 				} catch (IOException e) {
 					LOGGER.error("Failed to detect content type", e);
 				}
@@ -307,7 +391,6 @@ public class EuropaPlugin implements Filter {
 						List<String> values = (List<String>) this.bestBetUrls.get(url);
 						eventData.put(bestBetField, values);
 					}
-
 				}
 			}
 
@@ -315,6 +398,42 @@ public class EuropaPlugin implements Filter {
 
 		return events;
 
+	}
+
+	private void extractMetadata(Map<String, Object> eventData, HttpURLConnection httpURLConnection, URL fullUrl) {
+
+		try (InputStream inputStream = httpURLConnection.getInputStream()) {
+
+			Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
+			Elements metadataElements = document.getElementsByTag("meta");
+
+			metadataElements.stream().forEach(element -> {
+
+				String attrValue = element.attr("name");
+				String content = element.attr(METADATA_CONTENT);
+				LOGGER.info("metadataElements found {} : {} ", attrValue, content);
+
+				if (attrValue.equals("Docsroom_DocumentTitle")) {
+					eventData.put(METADATA_TITLE, Arrays.asList(content));
+
+				} else if (attrValue.equals("Docsroom_DocumentLanguage")) {
+					eventData.put(METADATA_LANGUAGES, Arrays.asList(content.toLowerCase()));
+
+				} else if (attrValue.equals("Docsroom_DocumentKeywords")) {
+					eventData.put(METADATA_KEYWORDS, content.split(","));
+
+				} else if (attrValue.equals("Docsroom_DocumentDate")) {
+
+					Date date = new Date(Long.getLong(content));
+					String dateFormatted = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(date);
+					eventData.put(METADATA_DATE, Arrays.asList(dateFormatted));
+				}
+
+			});
+
+		} catch (Exception e) {
+			LOGGER.error("Failed to read content from url : {}", fullUrl);
+		}
 	}
 
 	private List<String> getMatchingUrls(Map<String, String> urls, String url) {
