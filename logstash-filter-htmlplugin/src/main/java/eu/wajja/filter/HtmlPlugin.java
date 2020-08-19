@@ -282,10 +282,10 @@ public class HtmlPlugin implements Filter {
 				}
 			}
 
-			return Jsoup.clean(stringBuilder.toString(), Whitelist.basic());
+			return Jsoup.clean(stringBuilder.toString(), Whitelist.simpleText());
 		}
 
-		return Jsoup.clean(document.toString(), Whitelist.basic());
+		return Jsoup.clean(document.toString(), Whitelist.simpleText());
 	}
 
 	private String extractTitle(Document document, String url) {
@@ -303,7 +303,7 @@ public class HtmlPlugin implements Filter {
 				}
 			}
 
-			String title = Jsoup.clean(stringBuilder.toString(), Whitelist.basic());
+			String title = Jsoup.clean(stringBuilder.toString(), Whitelist.simpleText());
 
 			if (title != null && !title.isEmpty()) {
 				return title;
