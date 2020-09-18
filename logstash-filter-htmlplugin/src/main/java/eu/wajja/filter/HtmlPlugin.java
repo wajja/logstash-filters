@@ -281,6 +281,10 @@ public class HtmlPlugin implements Filter {
 					elements.eachText().forEach(t -> stringBuilder.append(t).append(" "));
 				}
 			}
+			
+			if(stringBuilder.toString().isEmpty()) {
+				return Jsoup.clean(document.text(), Whitelist.simpleText());
+			}
 
 			return Jsoup.clean(stringBuilder.toString(), Whitelist.simpleText());
 		}
