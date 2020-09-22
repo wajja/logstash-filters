@@ -20,70 +20,72 @@ import org.slf4j.LoggerFactory;
 
 public class ProxyController {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(ProxyController.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProxyController.class);
 
-	private Proxy proxy = null;
+    private Proxy proxy = null;
 
-	public ProxyController(String proxyUser, String proxyPass, String proxyHost, Long proxyPort, Boolean disableSSLcheck) {
+    public ProxyController(String proxyUser, String proxyPass, String proxyHost, Long proxyPort, Boolean disableSSLcheck) {
 
-		if (proxyUser != null && proxyPass != null) {
+        if (proxyUser != null && proxyPass != null) {
 
-			LOGGER.info("Initializing Proxy Security {}:{}", proxyHost, proxyPort);
-			Authenticator authenticator = new Authenticator() {
+            LOGGER.info("Initializing Proxy Security {}:{}", proxyHost, proxyPort);
+            Authenticator authenticator = new Authenticator() {
 
-				@Override
-				public PasswordAuthentication getPasswordAuthentication() {
+                @Override
+                public PasswordAuthentication getPasswordAuthentication() {
 
-					return new PasswordAuthentication(proxyUser, proxyPass.toCharArray());
-				}
-			};
+                    return new PasswordAuthentication(proxyUser, proxyPass.toCharArray());
+                }
+            };
 
-			Authenticator.setDefault(authenticator);
-		}
+            Authenticator.setDefault(authenticator);
+        }
 
-		if (proxyHost != null && proxyPort != null) {
+        if (proxyHost != null && proxyPort != null) {
 
-			LOGGER.info("Initializing Proxy {}:{}", proxyHost, proxyPort);
-			proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort.intValue()));
-		}
+            LOGGER.info("Initializing Proxy {}:{}", proxyHost, proxyPort);
+            proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort.intValue()));
+        }
 
-		if (!disableSSLcheck) {
+        if (!disableSSLcheck) {
 
-			TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-				public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-					return null;
-				}
+            TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
 
-				public void checkClientTrusted(X509Certificate[] certs, String authType) {
-				}
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
 
-				public void checkServerTrusted(X509Certificate[] certs, String authType) {
-				}
-			} };
+                    return null;
+                }
 
-			try {
-				SSLContext sc = SSLContext.getInstance("SSL");
-				sc.init(null, trustAllCerts, new java.security.SecureRandom());
-				HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+                public void checkClientTrusted(X509Certificate[] certs, String authType) {}
 
-			} catch (NoSuchAlgorithmException | KeyManagementException e) {
-				LOGGER.error("Failed to set authentication cert trust", e);
-			}
+                public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+            } };
 
-			HostnameVerifier allHostsValid = new HostnameVerifier() {
+            try {
+                SSLContext sc = SSLContext.getInstance("SSL");
+                sc.init(null, trustAllCerts, new java.security.SecureRandom());
+                HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
 
-				public boolean verify(String hostname, SSLSession session) {
-					return true;
-				}
-			};
+            } catch (NoSuchAlgorithmException | KeyManagementException e) {
+                LOGGER.error("Failed to set authentication cert trust", e);
+            }
 
-			HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+            HostnameVerifier allHostsValid = new HostnameVerifier() {
 
-		}
-	}
+                public boolean verify(String hostname, SSLSession session) {
 
-	public Proxy getProxy() {
-		return proxy;
-	}
+                    return true;
+                }
+            };
+
+            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+
+        }
+    }
+
+    public Proxy getProxy() {
+
+        return proxy;
+    }
 
 }

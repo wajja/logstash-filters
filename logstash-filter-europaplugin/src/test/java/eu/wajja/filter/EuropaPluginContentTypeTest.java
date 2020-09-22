@@ -40,7 +40,7 @@ public class EuropaPluginContentTypeTest {
 		e.setField("content", encodedContent);
 		e.setField("url", "http://localhost/test");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
 		Assert.assertFalse(results.isEmpty());
 
 		Event eee = (Event) results.stream().findFirst().orElse(new Event());
