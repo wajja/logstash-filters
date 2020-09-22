@@ -161,24 +161,28 @@ public class EuropaPlugin implements Filter {
 
 		if (pathRestricted.toFile().exists()) {
 
-			Arrays.asList(pathRestricted.toFile().listFiles()).stream().forEach(file -> {
+		    Arrays.asList(pathRestricted.toFile().listFiles()).stream().forEach(file -> {
 
-				try {
+			try {
 
-					List<String> lines = Files.readLines(file, Charset.defaultCharset());
+			    List<String> lines = Files.readLines(file, Charset.defaultCharset());
 
-					lines.stream().forEach(i -> {
+			    lines.stream().forEach(i -> {
 
-						String[] cc = i.split("\\|");
-						this.mapRestrictedFilters.put(cc[0], cc[1]);
-					});
+				String collectionName = file.getAbsoluteFile().getName().split("_")[1].replace(".csv", "");
 
-				} catch (IOException e) {
-					LOGGER.error("Failed to read csv", e);
-				}
-			});
+				String[] cc = i.split("\\|");
+				this.mapRestrictedFilters.put(cc[0], collectionName + "::" + cc[1].replace("/", "::"));
+			    });
+
+			} catch (Exception e) {
+			    LOGGER.error("Failed to read csv", e);
+			}
+		    });
 
 		}
+
+	    
 
 	}
 
@@ -283,32 +287,45 @@ public class EuropaPlugin implements Filter {
 						}
 					}
 
-					/**
-					 * RESTRICTED_FILTER
-					 */
+					    /**
+					     * RESTRICTED_FILTER
+					     */
 
-					List<String> restrictedFilters = getMatchingUrls(this.mapRestrictedFilters, url);
-					eventData.put(METADATA_RESTRICTED_FILTER, restrictedFilters);
+					    List<String> restrictedFilters = getMatchingUrls(this.mapRestrictedFilters, url);
 
-					/**
-					 * GENERAL_FILTER
-					 */
+					    List<String> parentLevelFilters = restrictedFilters.stream().filter(rf -> rf.split("::").length > 2).map(rf -> rf.split("::")[0] + "::" + rf.split("::")[1]).collect(Collectors.toList());
+					    if (!parentLevelFilters.isEmpty()) {
+						restrictedFilters.addAll(parentLevelFilters);
+					    }
+					    eventData.put(METADATA_RESTRICTED_FILTER, restrictedFilters.stream().distinct().collect(Collectors.toList()));
 
-					List<String> generalFilters = getMatchingUrls(this.mapGeneralFilters, url);
+					    /**
+					     * GENERAL_FILTER
+					     */
 
-					List<String> generalFiltersIds = getMatchingUrls(this.mapGeneralFiltersIds, url);
-					List<String> ids = generalFiltersIds.stream().flatMap(x -> Arrays.asList(x.split("\\/")).stream()).collect(Collectors.toList());
+					    List<String> generalFilters = getMatchingUrls(this.mapGeneralFilters, url);
 
-					HashSet<String> set = new HashSet<>(ids);
-					set.stream().forEach(s -> {
+					    List<String> generalFiltersIds = getMatchingUrls(this.mapGeneralFiltersIds, url);
+					    List<String> ids = generalFiltersIds.stream().flatMap(x -> Arrays.asList(x.split("\\/")).stream()).collect(Collectors.toList());
+
+					    HashSet<String> set = new HashSet<>(ids);
+					    set.stream().forEach(s -> {
 
 						if (this.mapGeneralFiltersTopics.containsKey(s)) {
-							generalFilters.add(this.mapGeneralFiltersTopics.get(s));
+
+						    String[] parts = this.mapGeneralFiltersTopics.get(s).split("/");
+						    if (!generalFilters.contains(parts[0])) {
+							generalFilters.add(parts[0]);
+						    }
+
+						    if (parts.length > 1) {
+							generalFilters.add(this.mapGeneralFiltersTopics.get(s).replace("/", "::"));
+						    }
 						}
 
-					});
+					    });
 
-					eventData.put(METADATA_GENERAL_FILTER, generalFilters);
+					    eventData.put(METADATA_GENERAL_FILTER, generalFilters.stream().distinct().collect(Collectors.toList()));
 
 					/**
 					 * DATE
