@@ -21,247 +21,244 @@ import co.elastic.logstash.api.Configuration;
 
 public class EuropaPluginLanguageDetectionTest {
 
-	private static final String METADATA_LANGUAGES = "languages";
-	private static final String REFERENCE = "reference";
-	private static final String CONTENT = "content";
-	private static final String PDF1 = "applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e";
+    private static final String METADATA_LANGUAGES = "languages";
+    private static final String REFERENCE = "reference";
+    private static final String CONTENT = "content";
+    private static final String PDF1 = "applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e";
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterLanguageDetection1Test() throws IOException {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterLanguageDetection1Test() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/test/index_fr.html");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/test/index_fr.html");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
 
-		Assert.assertTrue(languages.size() == 1);
-		Assert.assertTrue(languages.get(0).equals("fr"));
-	}
+        Assert.assertTrue(languages.size() == 1);
+        Assert.assertTrue(languages.get(0).equals("fr"));
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterLanguageDetection2Test() throws IOException {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterLanguageDetection2Test() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/test/en/index.html");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/test/en/index.html");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
 
-		Assert.assertTrue(languages.size() == 1);
-		Assert.assertTrue(languages.get(0).equals("en"));
-	}
-	
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterLanguageDetection2Point1Test() throws IOException {
+        Assert.assertTrue(languages.size() == 1);
+        Assert.assertTrue(languages.get(0).equals("en"));
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterLanguageDetection2Point1Test() throws IOException {
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "https://ec.europa.eu/maritimeaffairs/en/press/");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "https://ec.europa.eu/maritimeaffairs/en/press/");
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertTrue(languages.size() == 1);
-		Assert.assertTrue(languages.get(0).equals("en"));
-	}
-	
-	
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterLanguageDetection3Test() throws IOException {
+        Assert.assertTrue(languages.size() == 1);
+        Assert.assertTrue(languages.get(0).equals("en"));
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterLanguageDetection3Test() throws IOException {
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/test/de");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/test/de");
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertTrue(languages.size() == 1);
-		Assert.assertTrue(languages.get(0).equals("de"));
-	}
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterLanguageDetection4Test() throws IOException {
+        Assert.assertTrue(languages.size() == 1);
+        Assert.assertTrue(languages.get(0).equals("de"));
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterLanguageDetection4Test() throws IOException {
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/test_nl/blah");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/test_nl/blah");
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertTrue(languages.size() == 1);
-		Assert.assertTrue(languages.get(0).equals("nl"));
-	}
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterLanguageDetection5Test() throws IOException {
+        Assert.assertTrue(languages.size() == 1);
+        Assert.assertTrue(languages.get(0).equals("nl"));
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterLanguageDetection5Test() throws IOException {
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/test");
-		e.setField(METADATA_LANGUAGES, Arrays.asList("sk"));
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/test");
+        e.setField(METADATA_LANGUAGES, Arrays.asList("sk"));
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertTrue(languages.size() == 1);
-		Assert.assertTrue(languages.toString().equals("ConvertedList{delegate=[sk]}"));
-	}
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
 
-	/**
-	 * Let the API Detect the language
-	 * 
-	 * @throws IOException
-	 */
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterLanguageDetection6Test() throws IOException {
+        Assert.assertTrue(languages.size() == 1);
+        Assert.assertTrue(languages.toString().equals("ConvertedList{delegate=[sk]}"));
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
+    /**
+     * Let the API Detect the language
+     * 
+     * @throws IOException
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterLanguageDetection6Test() throws IOException {
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/test/blah");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/test/blah");
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertTrue(!data.containsKey(METADATA_LANGUAGES));
-	}
-	
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterLanguageDetection7Test() throws IOException {
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
+        Assert.assertTrue(!data.containsKey(METADATA_LANGUAGES));
+    }
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterLanguageDetection7Test() throws IOException {
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "https://ec.europa.eu/environment/nature/natura2000/platform/documents/first_marine_biogeographical_process_seminar/restitutions_day_3/c__group_1c_reporting_en.pdf");
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "https://ec.europa.eu/environment/nature/natura2000/platform/documents/first_marine_biogeographical_process_seminar/restitutions_day_3/c__group_1c_reporting_en.pdf");
 
-		Assert.assertTrue(languages.size() == 1);
-		Assert.assertTrue(languages.get(0).equals("en"));
-	}
-	
-	
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
+
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> languages = (List<String>) data.get(METADATA_LANGUAGES);
+
+        Assert.assertTrue(languages.size() == 1);
+        Assert.assertTrue(languages.get(0).equals("en"));
+    }
+
 }

@@ -20,236 +20,236 @@ import co.elastic.logstash.api.Configuration;
 
 public class EuropaPluginKeywordDetectionTest {
 
-	private static final String REFERENCE = "reference";
-	private static final String CONTENT = "content";
-	private static final String PDF1 = "applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e";
-	private static final String KEYWORDS = "KEYWORDS";
-	private static final String KEYWORDS1 = "keyword001";
-	private static final String KEYWORDS2 = "keyword002";
-	private static final String LOCALHOST = "localhost";
+    private static final String REFERENCE = "reference";
+    private static final String CONTENT = "content";
+    private static final String PDF1 = "applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e";
+    private static final String KEYWORDS = "KEYWORDS";
+    private static final String KEYWORDS1 = "keyword001";
+    private static final String KEYWORDS2 = "keyword002";
+    private static final String LOCALHOST = "localhost";
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void keywordSimpleHttpsDetectionTest() throws IOException {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void keywordSimpleHttpsDetectionTest() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "https://localhost/keyword001/keyword002");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "https://localhost/keyword001/keyword002");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
 
-		Assert.assertTrue(data.containsKey(KEYWORDS));
-		List<String> keywords = (List<String>) data.get(KEYWORDS);
+        Assert.assertTrue(data.containsKey(KEYWORDS));
+        List<String> keywords = (List<String>) data.get(KEYWORDS);
 
-		Assert.assertTrue(keywords.size() == 2);
-		Assert.assertTrue(keywords.contains(KEYWORDS1));
-		Assert.assertTrue(keywords.contains(KEYWORDS2));
-		Assert.assertFalse(keywords.contains(LOCALHOST));
+        Assert.assertTrue(keywords.size() == 2);
+        Assert.assertTrue(keywords.contains(KEYWORDS1));
+        Assert.assertTrue(keywords.contains(KEYWORDS2));
+        Assert.assertFalse(keywords.contains(LOCALHOST));
 
-	}
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void keywordSimpleDetectionTest() throws IOException {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void keywordSimpleDetectionTest() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/keyword001/keyword002");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/keyword001/keyword002");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
 
-		Assert.assertTrue(data.containsKey(KEYWORDS));
-		List<String> keywords = (List<String>) data.get(KEYWORDS);
+        Assert.assertTrue(data.containsKey(KEYWORDS));
+        List<String> keywords = (List<String>) data.get(KEYWORDS);
 
-		Assert.assertTrue(keywords.size() == 2);
-		Assert.assertTrue(keywords.contains(KEYWORDS1));
-		Assert.assertTrue(keywords.contains(KEYWORDS2));
-		Assert.assertFalse(keywords.contains(LOCALHOST));
+        Assert.assertTrue(keywords.size() == 2);
+        Assert.assertTrue(keywords.contains(KEYWORDS1));
+        Assert.assertTrue(keywords.contains(KEYWORDS2));
+        Assert.assertFalse(keywords.contains(LOCALHOST));
 
-	}
-	
-	@SuppressWarnings("unchecked")
-	@Test
-	public void keywordSimpleDetectionWithEuropaHostnameTest() throws IOException {
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+    @SuppressWarnings("unchecked")
+    @Test
+    public void keywordSimpleDetectionWithEuropaHostnameTest() throws IOException {
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "https://ec.europa.eu/maritimeaffairs/press/");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "https://ec.europa.eu/maritimeaffairs/press/");
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertTrue(data.containsKey(KEYWORDS));
-		List<String> keywords = (List<String>) data.get(KEYWORDS);
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
 
-		Assert.assertTrue(keywords.size() == 2);
-		Assert.assertTrue(keywords.contains("maritimeaffairs"));
-		Assert.assertTrue(keywords.contains("press"));
-		Assert.assertFalse(keywords.contains("ec.europa.eu"));
+        Assert.assertTrue(data.containsKey(KEYWORDS));
+        List<String> keywords = (List<String>) data.get(KEYWORDS);
 
-	}
+        Assert.assertTrue(keywords.size() == 2);
+        Assert.assertTrue(keywords.contains("maritimeaffairs"));
+        Assert.assertTrue(keywords.contains("press"));
+        Assert.assertFalse(keywords.contains("ec.europa.eu"));
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void keywordSimpleCaseSensitiveDetectionTest() throws IOException {
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+    @SuppressWarnings("unchecked")
+    @Test
+    public void keywordSimpleCaseSensitiveDetectionTest() throws IOException {
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "hTtp://locAlhost/keywoRd001/keywOrd002");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "hTtp://locAlhost/keywoRd001/keywOrd002");
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertTrue(data.containsKey(KEYWORDS));
-		List<String> keywords = (List<String>) data.get(KEYWORDS);
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
 
-		Assert.assertTrue(keywords.size() == 2);
-		Assert.assertTrue(keywords.contains(KEYWORDS1));
-		Assert.assertTrue(keywords.contains(KEYWORDS2));
-		Assert.assertFalse(keywords.contains(LOCALHOST));
+        Assert.assertTrue(data.containsKey(KEYWORDS));
+        List<String> keywords = (List<String>) data.get(KEYWORDS);
 
-	}
+        Assert.assertTrue(keywords.size() == 2);
+        Assert.assertTrue(keywords.contains(KEYWORDS1));
+        Assert.assertTrue(keywords.contains(KEYWORDS2));
+        Assert.assertFalse(keywords.contains(LOCALHOST));
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void keywordSimpleTrailingSlashDetectionTest() throws IOException {
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+    @SuppressWarnings("unchecked")
+    @Test
+    public void keywordSimpleTrailingSlashDetectionTest() throws IOException {
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/keyword001/keyword002/");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/keyword001/keyword002/");
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertTrue(data.containsKey(KEYWORDS));
-		List<String> keywords = (List<String>) data.get(KEYWORDS);
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
 
-		Assert.assertTrue(keywords.size() == 2);
-		Assert.assertTrue(keywords.contains(KEYWORDS1));
-		Assert.assertTrue(keywords.contains(KEYWORDS2));
-		Assert.assertFalse(keywords.contains(LOCALHOST));
+        Assert.assertTrue(data.containsKey(KEYWORDS));
+        List<String> keywords = (List<String>) data.get(KEYWORDS);
 
-	}
+        Assert.assertTrue(keywords.size() == 2);
+        Assert.assertTrue(keywords.contains(KEYWORDS1));
+        Assert.assertTrue(keywords.contains(KEYWORDS2));
+        Assert.assertFalse(keywords.contains(LOCALHOST));
 
-	@Test
-	public void keywordSimpleNoKeywordDetectionTest() throws IOException {
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+    @Test
+    public void keywordSimpleNoKeywordDetectionTest() throws IOException {
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/");
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertFalse(data.containsKey(KEYWORDS));
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
 
-	}
+        Assert.assertFalse(data.containsKey(KEYWORDS));
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void keywordSimplePhraseDetectionTest() throws IOException {
+    }
 
-		Map<String, Object> configValues = new HashMap<>();
-		Configuration config = new ConfigurationImpl(configValues);
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+    @SuppressWarnings("unchecked")
+    @Test
+    public void keywordSimplePhraseDetectionTest() throws IOException {
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://localhost/the-keyword-001/keyword002");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://localhost/the-keyword-001/keyword002");
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Assert.assertTrue(data.containsKey(KEYWORDS));
-		List<String> keywords = (List<String>) data.get(KEYWORDS);
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
 
-		Assert.assertTrue(keywords.size() == 2);
-		Assert.assertTrue(keywords.contains("the keyword 001"));
-		Assert.assertTrue(keywords.contains(KEYWORDS2));
-		Assert.assertFalse(keywords.contains(LOCALHOST));
+        Assert.assertTrue(data.containsKey(KEYWORDS));
+        List<String> keywords = (List<String>) data.get(KEYWORDS);
 
-	}
+        Assert.assertTrue(keywords.size() == 2);
+        Assert.assertTrue(keywords.contains("the keyword 001"));
+        Assert.assertTrue(keywords.contains(KEYWORDS2));
+        Assert.assertFalse(keywords.contains(LOCALHOST));
+
+    }
 
 }
