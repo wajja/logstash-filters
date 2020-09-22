@@ -23,242 +23,242 @@ import co.elastic.logstash.api.Configuration;
 
 public class EuropaPluginSimpleTest {
 
-	private static final String PDF1 = "applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e";
-	private static final String REFERENCE = "reference";
-	private static final String CONTENT = "content";
-	private static final String DATAFOLDER = "dataFolder";
+    private static final String PDF1 = "applicationpdf_23903fb6-a0b2-4971-b111-bf0dc8addc7e";
+    private static final String REFERENCE = "reference";
+    private static final String CONTENT = "content";
+    private static final String DATAFOLDER = "dataFolder";
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterGeneralFilterBasicTest() throws IOException {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterGeneralFilterBasicTest() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
+        Map<String, Object> configValues = new HashMap<>();
 
-		URL url = this.getClass().getClassLoader().getResource(PDF1);
-		File file = new File(url.getPath());
-		configValues.put(DATAFOLDER, file.getParent());
+        URL url = this.getClass().getClassLoader().getResource(PDF1);
+        File file = new File(url.getPath());
+        configValues.put(DATAFOLDER, file.getParent());
 
-		Configuration config = new ConfigurationImpl(configValues);
+        Configuration config = new ConfigurationImpl(configValues);
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://test.ec.europa.eu/test");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://test.ec.europa.eu/test");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
 
-		List<String> filters = (List<String>) data.get("GENERAL_FILTER");
+        List<String> filters = (List<String>) data.get("GENERAL_FILTER");
 
-		Assert.assertTrue(filters.size() == 2);
-		Assert.assertTrue(filters.contains("European Commission"));
-		Assert.assertTrue(filters.contains("General Information"));
-		Assert.assertTrue(data.containsKey("DATE"));
+        Assert.assertTrue(filters.size() == 2);
+        Assert.assertTrue(filters.contains("European Commission"));
+        Assert.assertTrue(filters.contains("General Information"));
+        Assert.assertTrue(data.containsKey("DATE"));
 
-	}
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterGeneralFilterWithTopicsTest() throws IOException {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterGeneralFilterWithTopicsTest() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
+        Map<String, Object> configValues = new HashMap<>();
 
-		URL url = this.getClass().getClassLoader().getResource(PDF1);
-		File file = new File(url.getPath());
-		configValues.put(DATAFOLDER, file.getParent());
+        URL url = this.getClass().getClassLoader().getResource(PDF1);
+        File file = new File(url.getPath());
+        configValues.put(DATAFOLDER, file.getParent());
 
-		Configuration config = new ConfigurationImpl(configValues);
+        Configuration config = new ConfigurationImpl(configValues);
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://ec.europa.eu/commission/commissioners/2014-2019/president/clinton");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://ec.europa.eu/commission/commissioners/2014-2019/president/clinton");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> filters = (List<String>) data.get("GENERAL_FILTER");
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> filters = (List<String>) data.get("GENERAL_FILTER");
 
-		Assert.assertTrue(filters.size() == 4);
-		Assert.assertTrue(filters.contains("European Commission"));
-		Assert.assertTrue(filters.contains("General Information"));
-		Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU/INFORMATION AND COMMUNICATION OF THE EU"));
-		Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU/EU INSTITUTIONS ADMINISTRATION AND STAFF"));
-		Assert.assertTrue(data.containsKey("DATE"));
+        Assert.assertTrue(filters.size() == 4);
+        Assert.assertTrue(filters.contains("European Commission"));
+        Assert.assertTrue(filters.contains("General Information"));
+        Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU/INFORMATION AND COMMUNICATION OF THE EU"));
+        Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU/EU INSTITUTIONS ADMINISTRATION AND STAFF"));
+        Assert.assertTrue(data.containsKey("DATE"));
 
-	}
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filterRestrictedFilterTest() throws IOException {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterRestrictedFilterTest() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
+        Map<String, Object> configValues = new HashMap<>();
 
-		URL url = this.getClass().getClassLoader().getResource(PDF1);
-		File file = new File(url.getPath());
-		configValues.put(DATAFOLDER, file.getParent());
+        URL url = this.getClass().getClassLoader().getResource(PDF1);
+        File file = new File(url.getPath());
+        configValues.put(DATAFOLDER, file.getParent());
 
-		Configuration config = new ConfigurationImpl(configValues);
+        Configuration config = new ConfigurationImpl(configValues);
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://ec.europa.eu/agriculture/cap-overview/south");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://ec.europa.eu/agriculture/cap-overview/south");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> filters = (List<String>) data.get("RESTRICTED_FILTER");
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> filters = (List<String>) data.get("RESTRICTED_FILTER");
 
-		Assert.assertTrue(filters.size() == 2);
-		Assert.assertTrue(filters.contains("GENERAL INFORMATION"));
-		Assert.assertTrue(filters.contains("THE CAP"));
-		Assert.assertTrue(data.containsKey("DATE"));
+        Assert.assertTrue(filters.size() == 2);
+        Assert.assertTrue(filters.contains("GENERAL INFORMATION"));
+        Assert.assertTrue(filters.contains("THE CAP"));
+        Assert.assertTrue(data.containsKey("DATE"));
 
-	}
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filtermetadataCustom1FilterTest() throws IOException {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filtermetadataCustom1FilterTest() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
+        Map<String, Object> configValues = new HashMap<>();
 
-		URL url = this.getClass().getClassLoader().getResource(PDF1);
-		File file = new File(url.getPath());
-		configValues.put(DATAFOLDER, file.getParent());
+        URL url = this.getClass().getClassLoader().getResource(PDF1);
+        File file = new File(url.getPath());
+        configValues.put(DATAFOLDER, file.getParent());
 
-		Map<String, Object> map = new HashMap<>();
-		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
-		map.put("http://#2", Arrays.asList("VALUE3"));
+        Map<String, Object> map = new HashMap<>();
+        map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
+        map.put("http://#2", Arrays.asList("VALUE3"));
 
-		configValues.put("bestBetUrls", map);
+        configValues.put("bestBetUrls", map);
 
-		Configuration config = new ConfigurationImpl(configValues);
+        Configuration config = new ConfigurationImpl(configValues);
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://#1");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://#1");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> filters = (List<String>) data.get("SITETITLE");
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> filters = (List<String>) data.get("SITETITLE");
 
-		Assert.assertTrue(filters.size() == 2);
-		Assert.assertTrue(filters.contains("VALUE1"));
-		Assert.assertTrue(filters.contains("VALUE2"));
+        Assert.assertTrue(filters.size() == 2);
+        Assert.assertTrue(filters.contains("VALUE1"));
+        Assert.assertTrue(filters.contains("VALUE2"));
 
-	}
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void filtermetadataCustom2FilterTest() throws IOException {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filtermetadataCustom2FilterTest() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
+        Map<String, Object> configValues = new HashMap<>();
 
-		URL url = this.getClass().getClassLoader().getResource(PDF1);
-		File file = new File(url.getPath());
-		configValues.put(DATAFOLDER, file.getParent());
+        URL url = this.getClass().getClassLoader().getResource(PDF1);
+        File file = new File(url.getPath());
+        configValues.put(DATAFOLDER, file.getParent());
 
-		Map<String, Object> map = new HashMap<>();
-		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
-		map.put("http://#2", Arrays.asList("VALUE3"));
+        Map<String, Object> map = new HashMap<>();
+        map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
+        map.put("http://#2", Arrays.asList("VALUE3"));
 
-		configValues.put("bestBetUrls", map);
+        configValues.put("bestBetUrls", map);
 
-		Configuration config = new ConfigurationImpl(configValues);
+        Configuration config = new ConfigurationImpl(configValues);
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://#2");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://#2");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		List<String> filters = (List<String>) data.get("SITETITLE");
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> filters = (List<String>) data.get("SITETITLE");
 
-		Assert.assertTrue(filters.size() == 1);
-		Assert.assertTrue(filters.contains("VALUE3"));
+        Assert.assertTrue(filters.size() == 1);
+        Assert.assertTrue(filters.contains("VALUE3"));
 
-	}
+    }
 
-	@Test
-	public void filtermetadataCustom3FilterTest() throws IOException {
+    @Test
+    public void filtermetadataCustom3FilterTest() throws IOException {
 
-		Map<String, Object> configValues = new HashMap<>();
+        Map<String, Object> configValues = new HashMap<>();
 
-		URL url = this.getClass().getClassLoader().getResource(PDF1);
-		File file = new File(url.getPath());
-		configValues.put(DATAFOLDER, file.getParent());
+        URL url = this.getClass().getClassLoader().getResource(PDF1);
+        File file = new File(url.getPath());
+        configValues.put(DATAFOLDER, file.getParent());
 
-		Map<String, Object> map = new HashMap<>();
-		map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
-		map.put("http://#2", Arrays.asList("VALUE3"));
+        Map<String, Object> map = new HashMap<>();
+        map.put("http://#1", Arrays.asList("VALUE1", "VALUE2"));
+        map.put("http://#2", Arrays.asList("VALUE3"));
 
-		configValues.put("metadataCustom", map);
+        configValues.put("metadataCustom", map);
 
-		Configuration config = new ConfigurationImpl(configValues);
+        Configuration config = new ConfigurationImpl(configValues);
 
-		EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
 
-		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
-		String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
-		inputStream.close();
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
 
-		Event e = new org.logstash.Event();
-		e.setField(REFERENCE, REFERENCE);
-		e.setField(CONTENT, encodedContent);
-		e.setField("url", "http://#3");
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http://#3");
 
-		Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
-		Assert.assertFalse(results.isEmpty());
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
 
-		Event eee = (Event) results.stream().findFirst().orElse(new Event());
-		Map<String, Object> data = eee.getData();
-		Assert.assertFalse(data.containsKey("SITETITLE"));
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        Assert.assertFalse(data.containsKey("SITETITLE"));
 
-	}
+    }
 }

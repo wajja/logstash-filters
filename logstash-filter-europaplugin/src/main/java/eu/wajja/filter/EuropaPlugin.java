@@ -53,425 +53,427 @@ import co.elastic.logstash.api.PluginConfigSpec;
 @LogstashPlugin(name = "europaplugin")
 public class EuropaPlugin implements Filter {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(EuropaPlugin.class);
-
-	private final Tika tika = new Tika();
-
-	private static final String PROPERTY_DATA_FOLDER = "dataFolder";
-	private static final String PROPERTY_CUSTOM_METADATA = "metadataCustom";
-	private static final String PROPERTY_SIMPLIFIED_CONTENT_TYPE = "simplifiedContentType";
-	private static final String PROPERTY_BEST_BET_URLS = "bestBetUrls";
-	private static final String PROPERTY_BEST_BET_FIELD = "bestBetField";
-	private static final String PROPERTY_METADATA_URL = "metadataUrl";
-	private static final String PROPERTY_TIMEOUT = "timeout";
-	private static final String PROPERTY_PROXY_HOST = "proxyHost";
-	private static final String PROPERTY_PROXY_PORT = "proxyPort";
-	private static final String PROPERTY_PROXY_USER = "proxyUser";
-	private static final String PROPERTY_PROXY_PASS = "proxyPass";
-	private static final String PROPERTY_CRAWLER_USER_AGENT = "crawlerUserAgent";
-	private static final String PROPERTY_CRAWLER_REFERER = "crawlerReferer";
-
-	private static final String ALLOWED_LANGUAGES = "(be)|(bg)|(bs)|(ca)|(cs)|(cy)|(da)|(de)|(el)|(en)|(es)|(et)|(eu)|(fi)|(fr)|(ga)|(hr)|(hu)|(is)|(it)|(lb)|(lt)|(lv)|(mk)|(mt)|(nl)|(no)|(pl)|(pt)|(ro)|(ru)|(sk)|(sl)|(sq)|(sr)|(sv)|(tr)|(uk)";
-	private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE";
-	private static final String METADATA_RESTRICTED_FILTER = "RESTRICTED_FILTER";
-	private static final String METADATA_GENERAL_FILTER = "GENERAL_FILTER";
-	private static final String METADATA_SITETITLE = "SITETITLE";
-	private static final String METADATA_CONTENT = "content";
-	private static final String METADATA_URL = "url";
-	private static final String METADATA_DATE = "DATE";
-	private static final String METADATA_KEYWORDS = "KEYWORDS";
-	private static final String METADATA_LANGUAGES = "languages";
-	private static final String METADATA_TITLE = "TITLE";
-
-	private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<String, Object>(), false, false);
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_SIMPLIFIED_CONTENT_TYPE = PluginConfigSpec.hashSetting(PROPERTY_SIMPLIFIED_CONTENT_TYPE, new HashMap<String, Object>(), false, false);
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_BEST_BET_URLS = PluginConfigSpec.hashSetting(PROPERTY_BEST_BET_URLS, new HashMap<String, Object>(), false, false);
-	private static final PluginConfigSpec<String> CONFIG_BEST_BET_FIELD = PluginConfigSpec.stringSetting(PROPERTY_BEST_BET_FIELD, METADATA_SITETITLE);
-	private static final PluginConfigSpec<String> CONFIG_METADATA_URL = PluginConfigSpec.stringSetting(PROPERTY_METADATA_URL, null, false, false);
-
-	public static final PluginConfigSpec<Long> CONFIG_TIMEOUT = PluginConfigSpec.numSetting(PROPERTY_TIMEOUT, 8000);
-	public static final PluginConfigSpec<String> CONFIG_PROXY_HOST = PluginConfigSpec.stringSetting(PROPERTY_PROXY_HOST);
-	public static final PluginConfigSpec<Long> CONFIG_PROXY_PORT = PluginConfigSpec.numSetting(PROPERTY_PROXY_PORT, 80);
-	public static final PluginConfigSpec<String> CONFIG_PROXY_USER = PluginConfigSpec.stringSetting(PROPERTY_PROXY_USER);
-	public static final PluginConfigSpec<String> CONFIG_PROXY_PASS = PluginConfigSpec.stringSetting(PROPERTY_PROXY_PASS);
-	public static final PluginConfigSpec<String> CONFIG_CRAWLER_USER_AGENT = PluginConfigSpec.stringSetting(PROPERTY_CRAWLER_USER_AGENT, "Wajja Europa Plugin");
-	public static final PluginConfigSpec<String> CONFIG_CRAWLER_REFERER = PluginConfigSpec.stringSetting(PROPERTY_CRAWLER_REFERER, "http://wajja.eu/");
-
-	private String threadId;
-	private Map<String, String> mapGeneralFilters;
-	private Map<String, String> mapGeneralFiltersIds;
-	private Map<String, String> mapGeneralFiltersTopics;
-	private Map<String, String> mapRestrictedFilters;
-	private Map<String, Object> customMetadata;
-	private Map<String, Object> simplifiedContentType;
-	private Map<String, Object> bestBetUrls;
-	private String bestBetField;
-	private String metadataUrl;
-	private Proxy proxy;
-	private Long timeout;
-	private String userAgent;
-	private String referer;
-	private ProxyController proxyController;
-
-	/**
-	 * Mandatory constructor
-	 * 
-	 * @param id
-	 * @param config
-	 * @param context
-	 * @throws IOException
-	 */
-	public EuropaPlugin(String id, Configuration config, Context context) throws IOException {
-
-		if (context != null && LOGGER.isDebugEnabled()) {
-			LOGGER.debug(context.toString());
-		}
-
-		this.threadId = id;
-
-		String dataFolder = config.get(CONFIG_DATA_FOLDER) + "/europa-data/";
-		this.customMetadata = config.get(CONFIG_CUSTOM_METADATA);
-		this.simplifiedContentType = config.get(CONFIG_SIMPLIFIED_CONTENT_TYPE);
-		this.bestBetField = config.get(CONFIG_BEST_BET_FIELD);
-		this.bestBetUrls = config.get(CONFIG_BEST_BET_URLS);
-		this.metadataUrl = config.get(CONFIG_METADATA_URL);
-		this.timeout = config.get(CONFIG_TIMEOUT);
-		this.referer = config.get(CONFIG_CRAWLER_REFERER);
-		this.userAgent = config.get(CONFIG_CRAWLER_USER_AGENT);
-
-		proxyController = new ProxyController(config.get(CONFIG_PROXY_USER), config.get(CONFIG_PROXY_PASS), config.get(CONFIG_PROXY_HOST), config.get(CONFIG_PROXY_PORT), false);
-
-		/**
-		 * General Filters
-		 */
-
-		Path pathGeneral = Paths.get(dataFolder + "/GENERAL_FILTER/");
-
-		this.mapGeneralFilters = parseCsv(pathGeneral, "general_filters.csv");
-		this.mapGeneralFiltersIds = parseCsv(pathGeneral, "general_filters_2013.csv");
-		this.mapGeneralFiltersTopics = parseCsv(pathGeneral, "general_filters_2013_topics.csv");
-
-		/**
-		 * RestrictedFilters
-		 */
+    private static final Logger LOGGER = LoggerFactory.getLogger(EuropaPlugin.class);
+
+    private final Tika tika = new Tika();
+
+    private static final String PROPERTY_DATA_FOLDER = "dataFolder";
+    private static final String PROPERTY_CUSTOM_METADATA = "metadataCustom";
+    private static final String PROPERTY_SIMPLIFIED_CONTENT_TYPE = "simplifiedContentType";
+    private static final String PROPERTY_BEST_BET_URLS = "bestBetUrls";
+    private static final String PROPERTY_BEST_BET_FIELD = "bestBetField";
+    private static final String PROPERTY_METADATA_URL = "metadataUrl";
+    private static final String PROPERTY_TIMEOUT = "timeout";
+    private static final String PROPERTY_PROXY_HOST = "proxyHost";
+    private static final String PROPERTY_PROXY_PORT = "proxyPort";
+    private static final String PROPERTY_PROXY_USER = "proxyUser";
+    private static final String PROPERTY_PROXY_PASS = "proxyPass";
+    private static final String PROPERTY_CRAWLER_USER_AGENT = "crawlerUserAgent";
+    private static final String PROPERTY_CRAWLER_REFERER = "crawlerReferer";
+
+    private static final String ALLOWED_LANGUAGES = "(be)|(bg)|(bs)|(ca)|(cs)|(cy)|(da)|(de)|(el)|(en)|(es)|(et)|(eu)|(fi)|(fr)|(ga)|(hr)|(hu)|(is)|(it)|(lb)|(lt)|(lv)|(mk)|(mt)|(nl)|(no)|(pl)|(pt)|(ro)|(ru)|(sk)|(sl)|(sq)|(sr)|(sv)|(tr)|(uk)";
+    private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE";
+    private static final String METADATA_RESTRICTED_FILTER = "RESTRICTED_FILTER";
+    private static final String METADATA_GENERAL_FILTER = "GENERAL_FILTER";
+    private static final String METADATA_SITETITLE = "SITETITLE";
+    private static final String METADATA_CONTENT = "content";
+    private static final String METADATA_URL = "url";
+    private static final String METADATA_DATE = "DATE";
+    private static final String METADATA_KEYWORDS = "KEYWORDS";
+    private static final String METADATA_LANGUAGES = "languages";
+    private static final String METADATA_TITLE = "TITLE";
+
+    private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
+    private static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<String, Object>(), false, false);
+    private static final PluginConfigSpec<Map<String, Object>> CONFIG_SIMPLIFIED_CONTENT_TYPE = PluginConfigSpec.hashSetting(PROPERTY_SIMPLIFIED_CONTENT_TYPE, new HashMap<String, Object>(), false, false);
+    private static final PluginConfigSpec<Map<String, Object>> CONFIG_BEST_BET_URLS = PluginConfigSpec.hashSetting(PROPERTY_BEST_BET_URLS, new HashMap<String, Object>(), false, false);
+    private static final PluginConfigSpec<String> CONFIG_BEST_BET_FIELD = PluginConfigSpec.stringSetting(PROPERTY_BEST_BET_FIELD, METADATA_SITETITLE);
+    private static final PluginConfigSpec<String> CONFIG_METADATA_URL = PluginConfigSpec.stringSetting(PROPERTY_METADATA_URL, null, false, false);
+
+    public static final PluginConfigSpec<Long> CONFIG_TIMEOUT = PluginConfigSpec.numSetting(PROPERTY_TIMEOUT, 8000);
+    public static final PluginConfigSpec<String> CONFIG_PROXY_HOST = PluginConfigSpec.stringSetting(PROPERTY_PROXY_HOST);
+    public static final PluginConfigSpec<Long> CONFIG_PROXY_PORT = PluginConfigSpec.numSetting(PROPERTY_PROXY_PORT, 80);
+    public static final PluginConfigSpec<String> CONFIG_PROXY_USER = PluginConfigSpec.stringSetting(PROPERTY_PROXY_USER);
+    public static final PluginConfigSpec<String> CONFIG_PROXY_PASS = PluginConfigSpec.stringSetting(PROPERTY_PROXY_PASS);
+    public static final PluginConfigSpec<String> CONFIG_CRAWLER_USER_AGENT = PluginConfigSpec.stringSetting(PROPERTY_CRAWLER_USER_AGENT, "Wajja Europa Plugin");
+    public static final PluginConfigSpec<String> CONFIG_CRAWLER_REFERER = PluginConfigSpec.stringSetting(PROPERTY_CRAWLER_REFERER, "http://wajja.eu/");
+
+    private String threadId;
+    private Map<String, String> mapGeneralFilters;
+    private Map<String, String> mapGeneralFiltersIds;
+    private Map<String, String> mapGeneralFiltersTopics;
+    private Map<String, String> mapRestrictedFilters;
+    private Map<String, Object> customMetadata;
+    private Map<String, Object> simplifiedContentType;
+    private Map<String, Object> bestBetUrls;
+    private String bestBetField;
+    private String metadataUrl;
+    private Proxy proxy;
+    private Long timeout;
+    private String userAgent;
+    private String referer;
+    private ProxyController proxyController;
+
+    /**
+     * Mandatory constructor
+     * 
+     * @param id
+     * @param config
+     * @param context
+     * @throws IOException
+     */
+    public EuropaPlugin(String id, Configuration config, Context context) throws IOException {
+
+        if (context != null && LOGGER.isDebugEnabled()) {
+            LOGGER.debug(context.toString());
+        }
+
+        this.threadId = id;
+
+        String dataFolder = config.get(CONFIG_DATA_FOLDER) + "/europa-data/";
+        this.customMetadata = config.get(CONFIG_CUSTOM_METADATA);
+        this.simplifiedContentType = config.get(CONFIG_SIMPLIFIED_CONTENT_TYPE);
+        this.bestBetField = config.get(CONFIG_BEST_BET_FIELD);
+        this.bestBetUrls = config.get(CONFIG_BEST_BET_URLS);
+        this.metadataUrl = config.get(CONFIG_METADATA_URL);
+        this.timeout = config.get(CONFIG_TIMEOUT);
+        this.referer = config.get(CONFIG_CRAWLER_REFERER);
+        this.userAgent = config.get(CONFIG_CRAWLER_USER_AGENT);
+
+        proxyController = new ProxyController(config.get(CONFIG_PROXY_USER), config.get(CONFIG_PROXY_PASS), config.get(CONFIG_PROXY_HOST), config.get(CONFIG_PROXY_PORT), false);
+
+        /**
+         * General Filters
+         */
+
+        Path pathGeneral = Paths.get(dataFolder + "/GENERAL_FILTER/");
+
+        this.mapGeneralFilters = parseCsv(pathGeneral, "general_filters.csv");
+        this.mapGeneralFiltersIds = parseCsv(pathGeneral, "general_filters_2013.csv");
+        this.mapGeneralFiltersTopics = parseCsv(pathGeneral, "general_filters_2013_topics.csv");
+
+        /**
+         * RestrictedFilters
+         */
 
-		Path pathRestricted = Paths.get(dataFolder + "/RESTRICTED_FILTER/");
-		this.mapRestrictedFilters = new HashedMap<>();
+        Path pathRestricted = Paths.get(dataFolder + "/RESTRICTED_FILTER/");
+        this.mapRestrictedFilters = new HashedMap<>();
 
-		if (pathRestricted.toFile().exists()) {
+        if (pathRestricted.toFile().exists()) {
 
-			Arrays.asList(pathRestricted.toFile().listFiles()).stream().forEach(file -> {
+            Arrays.asList(pathRestricted.toFile().listFiles()).stream().forEach(file -> {
 
-				try {
+                try {
 
-					List<String> lines = Files.readLines(file, Charset.defaultCharset());
+                    List<String> lines = Files.readLines(file, Charset.defaultCharset());
 
-					lines.stream().forEach(i -> {
+                    lines.stream().forEach(i -> {
 
-						String[] cc = i.split("\\|");
-						this.mapRestrictedFilters.put(cc[0], cc[1]);
-					});
+                        String[] cc = i.split("\\|");
+                        this.mapRestrictedFilters.put(cc[0], cc[1]);
+                    });
 
-				} catch (IOException e) {
-					LOGGER.error("Failed to read csv", e);
-				}
-			});
+                } catch (IOException e) {
+                    LOGGER.error("Failed to read csv", e);
+                }
+            });
 
-		}
+        }
 
-	}
+    }
 
-	/**
-	 * Returns a list of all configuration
-	 */
-	@Override
-	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA, CONFIG_SIMPLIFIED_CONTENT_TYPE, CONFIG_BEST_BET_FIELD, CONFIG_BEST_BET_URLS, CONFIG_METADATA_URL, CONFIG_TIMEOUT, CONFIG_PROXY_HOST, CONFIG_PROXY_PORT, CONFIG_PROXY_USER, CONFIG_PROXY_PASS, CONFIG_CRAWLER_USER_AGENT,
-				CONFIG_CRAWLER_REFERER);
-	}
+    /**
+     * Returns a list of all configuration
+     */
+    @Override
+    public Collection<PluginConfigSpec<?>> configSchema() {
 
-	@Override
-	public String getId() {
-		return this.threadId;
-	}
+        return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA, CONFIG_SIMPLIFIED_CONTENT_TYPE, CONFIG_BEST_BET_FIELD, CONFIG_BEST_BET_URLS, CONFIG_METADATA_URL, CONFIG_TIMEOUT, CONFIG_PROXY_HOST, CONFIG_PROXY_PORT, CONFIG_PROXY_USER, CONFIG_PROXY_PASS, CONFIG_CRAWLER_USER_AGENT,
+                CONFIG_CRAWLER_REFERER);
+    }
 
-	@Override
-	public Collection<Event> filter(Collection<Event> events, FilterMatchListener filterMatchListener) {
+    @Override
+    public String getId() {
 
-		events.stream().forEach(event -> {
+        return this.threadId;
+    }
 
-			Map<String, Object> eventData = event.getData();
+    @Override
+    public Collection<Event> filter(Collection<Event> events, FilterMatchListener filterMatchListener) {
 
-			if (eventData.containsKey(METADATA_URL) && eventData.containsKey(METADATA_CONTENT)) {
+        events.stream().forEach(event -> {
 
-				try {
-					String contentString = eventData.get(METADATA_CONTENT).toString();
-					byte[] bytes = Base64.getDecoder().decode(contentString);
+            Map<String, Object> eventData = event.getData();
 
-					String url = eventData.get(METADATA_URL).toString();
+            if (eventData.containsKey(METADATA_URL) && eventData.containsKey(METADATA_CONTENT)) {
 
-					/**
-					 * SIMPLIFIED CONTENT TYPE
-					 */
+                try {
+                    String contentString = eventData.get(METADATA_CONTENT).toString();
+                    byte[] bytes = Base64.getDecoder().decode(contentString);
 
-					MediaType mediaType = tika.getDetector().detect(TikaInputStream.get(bytes), new Metadata());
-					String contentType = mediaType.getSubtype();
+                    String url = eventData.get(METADATA_URL).toString();
 
-					if (contentType != null && this.simplifiedContentType.containsKey(contentType)) {
-						eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, (String) simplifiedContentType.get(contentType));
-					} else {
-						LOGGER.info("Could not map simplified content type from url : {}, detected simple : {}", url, contentType);
-					}
+                    /**
+                     * SIMPLIFIED CONTENT TYPE
+                     */
 
-					/**
-					 * KEYWORDS
-					 */
+                    MediaType mediaType = tika.getDetector().detect(TikaInputStream.get(bytes), new Metadata());
+                    String contentType = mediaType.getSubtype();
 
-					String keywordsUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/)[^\\/]{2,}(\\/)", "");
-					if (keywordsUrl.endsWith("/")) {
-						keywordsUrl = keywordsUrl.substring(0, keywordsUrl.length() - 1);
-					}
+                    if (contentType != null && this.simplifiedContentType.containsKey(contentType)) {
+                        eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, (String) simplifiedContentType.get(contentType));
+                    } else {
+                        LOGGER.info("Could not map simplified content type from url : {}, detected simple : {}", url, contentType);
+                    }
 
-					if (!keywordsUrl.isEmpty()) {
+                    /**
+                     * KEYWORDS
+                     */
 
-						String[] keywordUrls = keywordsUrl.split("/");
+                    String keywordsUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/)[^\\/]{2,}(\\/)", "");
+                    if (keywordsUrl.endsWith("/")) {
+                        keywordsUrl = keywordsUrl.substring(0, keywordsUrl.length() - 1);
+                    }
 
-						for (int x = 0; x < keywordUrls.length; x++) {
-							keywordUrls[x] = keywordUrls[x].replace("-", " ");
-						}
+                    if (!keywordsUrl.isEmpty()) {
 
-						if (keywordUrls.length > 0) {
-							eventData.put(METADATA_KEYWORDS, Arrays.asList(keywordUrls).stream().filter(f -> !f.isEmpty()).collect(Collectors.toList()));
-						}
-					}
+                        String[] keywordUrls = keywordsUrl.split("/");
 
-					/**
-					 * LANGUAGES
-					 */
+                        for (int x = 0; x < keywordUrls.length; x++) {
+                            keywordUrls[x] = keywordUrls[x].replace("-", " ");
+                        }
 
-					String languagesUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/)[a-z]{2,}(\\/)", "");
-					if (languagesUrl.endsWith("/")) {
-						languagesUrl = languagesUrl.substring(0, languagesUrl.length() - 1);
-					}
+                        if (keywordUrls.length > 0) {
+                            eventData.put(METADATA_KEYWORDS, Arrays.asList(keywordUrls).stream().filter(f -> !f.isEmpty()).collect(Collectors.toList()));
+                        }
+                    }
 
-					if (!languagesUrl.isEmpty()) {
+                    /**
+                     * LANGUAGES
+                     */
 
-						String[] languagesUrls = languagesUrl.split("/");
+                    String languagesUrl = url.toLowerCase().replaceAll("(http).*(\\/\\/)[a-z]{2,}(\\/)", "");
+                    if (languagesUrl.endsWith("/")) {
+                        languagesUrl = languagesUrl.substring(0, languagesUrl.length() - 1);
+                    }
 
-						for (int x = 0; x < languagesUrls.length; x++) {
+                    if (!languagesUrl.isEmpty()) {
 
-							try {
-								String param = languagesUrls[x];
+                        String[] languagesUrls = languagesUrl.split("/");
 
-								if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")\\..*")) {
-									param = param.replaceAll(".*_", "").substring(0, 2);
-									eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
+                        for (int x = 0; x < languagesUrls.length; x++) {
 
-								} else if (param.matches(ALLOWED_LANGUAGES)) {
-									eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
+                            try {
+                                String param = languagesUrls[x];
 
-								} else if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")")) {
-									param = param.replaceAll(".*_", "");
-									eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
+                                if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")\\..*")) {
+                                    param = param.replaceAll(".*_", "").substring(0, 2);
+                                    eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
 
-								}
+                                } else if (param.matches(ALLOWED_LANGUAGES)) {
+                                    eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
 
-							} catch (StringIndexOutOfBoundsException e) {
-								LOGGER.error("Failed to detect language from url {}", languagesUrl, e);
-							}
-						}
-					}
+                                } else if (param.matches(".*_(" + ALLOWED_LANGUAGES + ")")) {
+                                    param = param.replaceAll(".*_", "");
+                                    eventData.put(METADATA_LANGUAGES, Arrays.asList(param));
 
-					/**
-					 * RESTRICTED_FILTER
-					 */
+                                }
 
-					List<String> restrictedFilters = getMatchingUrls(this.mapRestrictedFilters, url);
-					eventData.put(METADATA_RESTRICTED_FILTER, restrictedFilters);
+                            } catch (StringIndexOutOfBoundsException e) {
+                                LOGGER.error("Failed to detect language from url {}", languagesUrl, e);
+                            }
+                        }
+                    }
 
-					/**
-					 * GENERAL_FILTER
-					 */
+                    /**
+                     * RESTRICTED_FILTER
+                     */
 
-					List<String> generalFilters = getMatchingUrls(this.mapGeneralFilters, url);
+                    List<String> restrictedFilters = getMatchingUrls(this.mapRestrictedFilters, url);
+                    eventData.put(METADATA_RESTRICTED_FILTER, restrictedFilters);
 
-					List<String> generalFiltersIds = getMatchingUrls(this.mapGeneralFiltersIds, url);
-					List<String> ids = generalFiltersIds.stream().flatMap(x -> Arrays.asList(x.split("\\/")).stream()).collect(Collectors.toList());
+                    /**
+                     * GENERAL_FILTER
+                     */
 
-					HashSet<String> set = new HashSet<>(ids);
-					set.stream().forEach(s -> {
+                    List<String> generalFilters = getMatchingUrls(this.mapGeneralFilters, url);
 
-						if (this.mapGeneralFiltersTopics.containsKey(s)) {
-							generalFilters.add(this.mapGeneralFiltersTopics.get(s));
-						}
+                    List<String> generalFiltersIds = getMatchingUrls(this.mapGeneralFiltersIds, url);
+                    List<String> ids = generalFiltersIds.stream().flatMap(x -> Arrays.asList(x.split("\\/")).stream()).collect(Collectors.toList());
 
-					});
+                    HashSet<String> set = new HashSet<>(ids);
+                    set.stream().forEach(s -> {
 
-					eventData.put(METADATA_GENERAL_FILTER, generalFilters);
+                        if (this.mapGeneralFiltersTopics.containsKey(s)) {
+                            generalFilters.add(this.mapGeneralFiltersTopics.get(s));
+                        }
 
-					/**
-					 * DATE
-					 */
+                    });
 
-					if (!eventData.containsKey(METADATA_DATE)) {
-						String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(new Date());
-						eventData.put(METADATA_DATE, Arrays.asList(date));
-					}
+                    eventData.put(METADATA_GENERAL_FILTER, generalFilters);
 
-					/**
-					 * Extra metadata from url
-					 */
+                    /**
+                     * DATE
+                     */
 
-					if (this.metadataUrl != null && !this.metadataUrl.isEmpty()) {
+                    if (!eventData.containsKey(METADATA_DATE)) {
+                        String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(new Date());
+                        eventData.put(METADATA_DATE, Arrays.asList(date));
+                    }
 
-						String httpUrl = url.replace("https", "http");
-						HttpURLConnection httpURLConnection = null;
+                    /**
+                     * Extra metadata from url
+                     */
 
-						try {
+                    if (this.metadataUrl != null && !this.metadataUrl.isEmpty()) {
 
-							URL fullUrl = new URL(this.metadataUrl + httpUrl);
+                        String httpUrl = url.replace("https", "http");
+                        HttpURLConnection httpURLConnection = null;
 
-							LOGGER.info("Extracting metadata from {}", fullUrl);
+                        try {
 
-							if (proxy == null) {
-								httpURLConnection = (HttpURLConnection) fullUrl.openConnection();
-							} else {
-								httpURLConnection = (HttpURLConnection) fullUrl.openConnection(proxy);
-							}
+                            URL fullUrl = new URL(this.metadataUrl + httpUrl);
 
-							httpURLConnection.setConnectTimeout(timeout.intValue());
-							httpURLConnection.setReadTimeout(timeout.intValue());
-							httpURLConnection.addRequestProperty("Accept-Language", "en-US,en;q=0.8");
-							httpURLConnection.addRequestProperty("User-Agent", userAgent);
-							httpURLConnection.addRequestProperty("Referer", referer);
+                            LOGGER.info("Extracting metadata from {}", fullUrl);
 
-							httpURLConnection.connect();
+                            if (proxy == null) {
+                                httpURLConnection = (HttpURLConnection) fullUrl.openConnection();
+                            } else {
+                                httpURLConnection = (HttpURLConnection) fullUrl.openConnection(proxy);
+                            }
 
-							if (httpURLConnection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-								extractMetadata(eventData, httpURLConnection, fullUrl);
-							}
+                            httpURLConnection.setConnectTimeout(timeout.intValue());
+                            httpURLConnection.setReadTimeout(timeout.intValue());
+                            httpURLConnection.addRequestProperty("Accept-Language", "en-US,en;q=0.8");
+                            httpURLConnection.addRequestProperty("User-Agent", userAgent);
+                            httpURLConnection.addRequestProperty("Referer", referer);
 
-						} catch (Exception e) {
-							LOGGER.error("Failed to retrieve metadata for url : {}", httpUrl);
+                            httpURLConnection.connect();
 
-						} finally {
+                            if (httpURLConnection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                                extractMetadata(eventData, httpURLConnection, fullUrl);
+                            }
 
-							if (httpURLConnection != null) {
-								httpURLConnection.disconnect();
-							}
-						}
-					}
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to retrieve metadata for url : {}", httpUrl);
 
-				} catch (IOException e) {
-					LOGGER.error("Failed to detect content type", e);
-				}
+                        } finally {
 
-			}
+                            if (httpURLConnection != null) {
+                                httpURLConnection.disconnect();
+                            }
+                        }
+                    }
 
-			/**
-			 * Add the configured metadata
-			 */
-			customMetadata.entrySet().stream().forEach(entry -> eventData.put(entry.getKey(), entry.getValue()));
+                } catch (IOException e) {
+                    LOGGER.error("Failed to detect content type", e);
+                }
 
-			/**
-			 * Mapping URLS to BestBets
-			 */
-			if (eventData.containsKey(METADATA_URL)) {
+            }
 
-				String url = eventData.get(METADATA_URL).toString();
+            /**
+             * Add the configured metadata
+             */
+            customMetadata.entrySet().stream().forEach(entry -> eventData.put(entry.getKey(), entry.getValue()));
 
-				if (this.bestBetUrls.containsKey(url)) {
+            /**
+             * Mapping URLS to BestBets
+             */
+            if (eventData.containsKey(METADATA_URL)) {
 
-					if (this.bestBetUrls.get(url) instanceof String[]) {
-						String[] values = (String[]) this.bestBetUrls.get(url);
-						eventData.put(bestBetField, Arrays.asList(values));
+                String url = eventData.get(METADATA_URL).toString();
 
-					} else {
-						List<String> values = (List<String>) this.bestBetUrls.get(url);
-						eventData.put(bestBetField, values);
-					}
-				}
-			}
+                if (this.bestBetUrls.containsKey(url)) {
 
-		});
+                    if (this.bestBetUrls.get(url) instanceof String[]) {
+                        String[] values = (String[]) this.bestBetUrls.get(url);
+                        eventData.put(bestBetField, Arrays.asList(values));
 
-		return events;
+                    } else {
+                        List<String> values = (List<String>) this.bestBetUrls.get(url);
+                        eventData.put(bestBetField, values);
+                    }
+                }
+            }
 
-	}
+        });
 
-	private void extractMetadata(Map<String, Object> eventData, HttpURLConnection httpURLConnection, URL fullUrl) {
+        return events;
 
-		try (InputStream inputStream = httpURLConnection.getInputStream()) {
+    }
 
-			Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
-			Elements metadataElements = document.getElementsByTag("meta");
+    private void extractMetadata(Map<String, Object> eventData, HttpURLConnection httpURLConnection, URL fullUrl) {
 
-			metadataElements.stream().forEach(element -> {
+        try (InputStream inputStream = httpURLConnection.getInputStream()) {
 
-				String attrValue = element.attr("name");
-				String content = element.attr(METADATA_CONTENT);
-				LOGGER.info("metadataElements found {} : {} ", attrValue, content);
+            Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
+            Elements metadataElements = document.getElementsByTag("meta");
 
-				if (attrValue.equals("Docsroom_DocumentTitle")) {
-					eventData.put(METADATA_TITLE, Arrays.asList(content));
+            metadataElements.stream().forEach(element -> {
 
-				} else if (attrValue.equals("Docsroom_DocumentLanguage")) {
-					eventData.put(METADATA_LANGUAGES, Arrays.asList(content.toLowerCase()));
+                String attrValue = element.attr("name");
+                String content = element.attr(METADATA_CONTENT);
+                LOGGER.info("metadataElements found {} : {} ", attrValue, content);
 
-				} else if (attrValue.equals("Docsroom_DocumentKeywords")) {
-					eventData.put(METADATA_KEYWORDS, content.split(","));
+                if (attrValue.equals("Docsroom_DocumentTitle")) {
+                    eventData.put(METADATA_TITLE, Arrays.asList(content));
 
-				} else if (attrValue.equals("Docsroom_DocumentDate")) {
+                } else if (attrValue.equals("Docsroom_DocumentLanguage")) {
+                    eventData.put(METADATA_LANGUAGES, Arrays.asList(content.toLowerCase()));
 
-					Date date = new Date(Long.getLong(content));
-					String dateFormatted = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(date);
-					eventData.put(METADATA_DATE, Arrays.asList(dateFormatted));
-				}
+                } else if (attrValue.equals("Docsroom_DocumentKeywords")) {
+                    eventData.put(METADATA_KEYWORDS, content.split(","));
 
-			});
+                } else if (attrValue.equals("Docsroom_DocumentDate")) {
 
-		} catch (Exception e) {
-			LOGGER.error("Failed to read content from url : {}", fullUrl);
-		}
-	}
+                    Date date = new Date(Long.getLong(content));
+                    String dateFormatted = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(date);
+                    eventData.put(METADATA_DATE, Arrays.asList(dateFormatted));
+                }
 
-	private List<String> getMatchingUrls(Map<String, String> urls, String url) {
+            });
 
-		return urls.keySet().parallelStream().filter(k -> {
+        } catch (Exception e) {
+            LOGGER.error("Failed to read content from url : {}", fullUrl);
+        }
+    }
 
-			StringBuilder stringBuilder = new StringBuilder();
+    private List<String> getMatchingUrls(Map<String, String> urls, String url) {
 
-			if (k.startsWith("*")) {
-				stringBuilder.append(".");
-			} else {
-				stringBuilder.append(".*");
-			}
+        return urls.keySet().parallelStream().filter(k -> {
 
-			stringBuilder.append(k).append(".*");
+            StringBuilder stringBuilder = new StringBuilder();
 
-			return Pattern.matches(stringBuilder.toString(), url);
+            if (k.startsWith("*")) {
+                stringBuilder.append(".");
+            } else {
+                stringBuilder.append(".*");
+            }
 
-		}).map(k -> urls.get(k)).collect(Collectors.toList());
-	}
+            stringBuilder.append(k).append(".*");
 
-	private Map<String, String> parseCsv(Path pathGeneral, String name) throws IOException {
+            return Pattern.matches(stringBuilder.toString(), url);
 
-		Map<String, String> map = new HashedMap<>();
+        }).map(k -> urls.get(k)).collect(Collectors.toList());
+    }
 
-		if (pathGeneral.toFile().exists()) {
+    private Map<String, String> parseCsv(Path pathGeneral, String name) throws IOException {
 
-			File file = Arrays.asList(pathGeneral.toFile().listFiles()).stream().filter(f -> f.getName().equals(name)).findFirst().orElse(null);
+        Map<String, String> map = new HashedMap<>();
 
-			List<String> lines = Files.readLines(file, Charset.defaultCharset());
-			lines.stream().forEach(i -> {
+        if (pathGeneral.toFile().exists()) {
 
-				String[] cc = i.split("\\|");
-				map.put(cc[0], cc[1]);
-			});
+            File file = Arrays.asList(pathGeneral.toFile().listFiles()).stream().filter(f -> f.getName().equals(name)).findFirst().orElse(null);
 
-		}
+            List<String> lines = Files.readLines(file, Charset.defaultCharset());
+            lines.stream().forEach(i -> {
 
-		return map;
-	}
+                String[] cc = i.split("\\|");
+                map.put(cc[0], cc[1]);
+            });
+
+        }
+
+        return map;
+    }
 }
