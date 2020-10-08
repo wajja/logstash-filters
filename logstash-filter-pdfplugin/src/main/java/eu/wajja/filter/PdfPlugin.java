@@ -2,6 +2,7 @@ package eu.wajja.filter;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
@@ -39,197 +40,199 @@ import co.elastic.logstash.api.PluginConfigSpec;
 @LogstashPlugin(name = "pdfplugin")
 public class PdfPlugin implements Filter {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(PdfPlugin.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PdfPlugin.class);
 
-	private final Tika tika = new Tika();
+    private final Tika tika = new Tika();
 
-	protected static final String PROPERTY_METADATA = "metadata";
-	protected static final String PROPERTY_METADATA_CUSTOM = "metadataCustom";
+    protected static final String PROPERTY_METADATA = "metadata";
+    protected static final String PROPERTY_METADATA_CUSTOM = "metadataCustom";
 
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_CUSTOM = PluginConfigSpec.hashSetting(PROPERTY_METADATA_CUSTOM, new HashMap<String, Object>(), false, false);
+    private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_CUSTOM = PluginConfigSpec.hashSetting(PROPERTY_METADATA_CUSTOM, new HashMap<String, Object>(), false, false);
 
-	private static final String METADATA_TITLE = "TITLE";
-	private static final String METADATA_DATE = "DATE";
-	private static final String METADATA_CONTENT_TYPE = "CONTENT-TYPE";
+    private static final String METADATA_TITLE = "TITLE";
+    private static final String METADATA_DATE = "DATE";
+    private static final String METADATA_CONTENT_TYPE = "CONTENT-TYPE";
 
-	private static final String METADATA_URL = "url";
-	private static final String METADATA_CONTENT = "content";
-	private static final String METADATA_TYPE = "type";
-	private static final String METADATA_REFERENCE = "reference";
-	private static final String METADATA_LANGUAGES = "languages";
-	private static final String METADATA_CONTENT_DISPOSITION = "Content-Disposition";
+    private static final String METADATA_URL = "url";
+    private static final String METADATA_CONTENT = "content";
+    private static final String METADATA_TYPE = "type";
+    private static final String METADATA_REFERENCE = "reference";
+    private static final String METADATA_LANGUAGES = "languages";
+    private static final String METADATA_CONTENT_DISPOSITION = "Content-Disposition";
 
-	private String threadId;
-	private LanguageDetector detector;
-	private Map<String, Object> metadataCustom;
+    private String threadId;
+    private LanguageDetector detector;
+    private Map<String, Object> metadataCustom;
 
-	/**
-	 * Mandatory constructor
-	 * 
-	 * @param id
-	 * @param config
-	 * @param context
-	 * @throws IOException
-	 */
-	public PdfPlugin(String id, Configuration config, Context context) {
+    /**
+     * Mandatory constructor
+     * 
+     * @param id
+     * @param config
+     * @param context
+     * @throws IOException
+     */
+    public PdfPlugin(String id, Configuration config, Context context) {
 
-		if (context != null && LOGGER.isDebugEnabled()) {
-			LOGGER.debug(context.toString());
-		}
+        if (context != null && LOGGER.isDebugEnabled()) {
+            LOGGER.debug(context.toString());
+        }
 
-		this.threadId = id;
-		this.detector = new OptimaizeLangDetector().loadModels();
-		this.metadataCustom = config.get(CONFIG_METADATA_CUSTOM);
-	}
+        this.threadId = id;
+        this.detector = new OptimaizeLangDetector().loadModels();
+        this.metadataCustom = config.get(CONFIG_METADATA_CUSTOM);
+    }
 
-	/**
-	 * Returns a list of all configuration
-	 */
-	@Override
-	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_METADATA_CUSTOM);
-	}
+    /**
+     * Returns a list of all configuration
+     */
+    @Override
+    public Collection<PluginConfigSpec<?>> configSchema() {
 
-	@Override
-	public String getId() {
-		return this.threadId;
-	}
+        return Arrays.asList(CONFIG_METADATA_CUSTOM);
+    }
 
-	@Override
-	public Collection<Event> filter(Collection<Event> events, FilterMatchListener filterMatchListener) {
+    @Override
+    public String getId() {
 
-		events.stream().forEach(event -> {
+        return this.threadId;
+    }
 
-			Map<String, Object> eventData = event.getData();
+    @Override
+    public Collection<Event> filter(Collection<Event> events, FilterMatchListener filterMatchListener) {
 
-			if (eventData.containsKey(METADATA_URL) && eventData.containsKey(METADATA_CONTENT)) {
+        events.stream().forEach(event -> {
 
-				String contentString = eventData.get(METADATA_CONTENT).toString();
-				byte[] bytes = Base64.getDecoder().decode(contentString);
+            Map<String, Object> eventData = event.getData();
 
-				/**
-				 * Detects type if does not exist
-				 */
+            if (eventData.containsKey(METADATA_URL) && eventData.containsKey(METADATA_CONTENT)) {
 
-				String type;
+                String contentString = eventData.get(METADATA_CONTENT).toString();
+                byte[] bytes = Base64.getDecoder().decode(contentString);
 
-				if (eventData.containsKey(METADATA_TYPE)) {
-					type = eventData.get(METADATA_TYPE).toString();
+                /**
+                 * Detects type if does not exist
+                 */
 
-				} else {
-					type = tika.detect(bytes);
-					eventData.put(METADATA_TYPE, type);
-				}
+                String type;
 
-				// Only parse HTML here
+                if (eventData.containsKey(METADATA_TYPE)) {
+                    type = eventData.get(METADATA_TYPE).toString();
 
-				if (type.contains("pdf")) {
+                } else {
+                    type = tika.detect(bytes);
+                    eventData.put(METADATA_TYPE, type);
+                }
 
-					String reference = ((RubyString) eventData.get(METADATA_REFERENCE)).toString();
-					LOGGER.info("Found document with type {}, {}", type, reference);
+                // Only parse HTML here
 
-					try {
+                if (type.contains("pdf")) {
 
-						BodyContentHandler handler = new BodyContentHandler(-1);
-						Metadata metadata = new Metadata();
-						ParseContext pcontext = new ParseContext();
+                    String reference = ((RubyString) eventData.get(METADATA_REFERENCE)).toString();
+                    LOGGER.info("Found document with type {}, {}", type, reference);
 
-						PDFParser pdfparser = new PDFParser();
-						pdfparser.parse(new ByteArrayInputStream(bytes), handler, metadata, pcontext);
-						String content = handler.toString();
+                    try (InputStream stream = new ByteArrayInputStream(bytes)) {
 
-						/**
-						 * Detects Title of Document
-						 */
+                        BodyContentHandler handler = new BodyContentHandler(-1);
+                        Metadata metadata = new Metadata();
+                        ParseContext pcontext = new ParseContext();
 
-						String title = Arrays.asList(metadata.names()).stream().filter(name -> name.contains("title")).map(name -> metadata.get(name).trim()).filter(value -> !value.isEmpty()).findFirst().orElse(null);
+                        PDFParser pdfparser = new PDFParser();
+                        pdfparser.parse(stream, handler, metadata, pcontext);
+                        String content = handler.toString();
 
-						if (title != null && !title.isEmpty()) {
-							eventData.put(METADATA_TITLE, title);
-						} else {
+                        /**
+                         * Detects Title of Document
+                         */
 
-							PDDocument doc = PDDocument.load(bytes);
-							PDDocumentInformation info = doc.getDocumentInformation();
+                        String title = Arrays.asList(metadata.names()).stream().filter(name -> name.contains("title")).map(name -> metadata.get(name).trim()).filter(value -> !value.isEmpty()).findFirst().orElse(null);
 
-							if (info != null && info.getTitle() != null && !info.getTitle().trim().isEmpty()) {
-								title = info.getTitle().trim();
-								eventData.put(METADATA_TITLE, title);
+                        if (title != null && !title.isEmpty()) {
+                            eventData.put(METADATA_TITLE, title);
+                        } else {
 
-							} else {
+                            PDDocument doc = PDDocument.load(bytes);
+                            PDDocumentInformation info = doc.getDocumentInformation();
 
-								if (eventData.containsKey(METADATA_CONTENT_DISPOSITION) && eventData.get(METADATA_CONTENT_DISPOSITION).toString().contains("filename")) {
+                            if (info != null && info.getTitle() != null && !info.getTitle().trim().isEmpty()) {
+                                title = info.getTitle().trim();
+                                eventData.put(METADATA_TITLE, title);
 
-									String filename = eventData.get(METADATA_CONTENT_DISPOSITION).toString();
-									filename = filename.substring(filename.indexOf("filename")).replace("filename", "").trim();
+                            } else {
 
-									if (filename.startsWith("=")) {
-										filename = filename.substring(1);
-									}
+                                if (eventData.containsKey(METADATA_CONTENT_DISPOSITION) && eventData.get(METADATA_CONTENT_DISPOSITION).toString().contains("filename")) {
 
-									if (filename.contains(".")) {
-										filename = filename.substring(0, filename.lastIndexOf('.'));
-									}
+                                    String filename = eventData.get(METADATA_CONTENT_DISPOSITION).toString();
+                                    filename = filename.substring(filename.indexOf("filename")).replace("filename", "").trim();
 
-									filename = filename.replaceAll("[^A-Za-z0-9]", " ").trim();
+                                    if (filename.startsWith("=")) {
+                                        filename = filename.substring(1);
+                                    }
 
-									eventData.put(METADATA_TITLE, filename);
+                                    if (filename.contains(".")) {
+                                        filename = filename.substring(0, filename.lastIndexOf('.'));
+                                    }
 
-								} else {
+                                    filename = filename.replaceAll("[^A-Za-z0-9]", " ").trim();
 
-									String url = eventData.get(METADATA_URL).toString();
-									url = url.substring(url.lastIndexOf('/') + 1);
+                                    eventData.put(METADATA_TITLE, filename);
 
-									if (url.contains(".")) {
-										url = url.substring(0, url.lastIndexOf('.'));
-									}
+                                } else {
 
-									eventData.put(METADATA_TITLE, url);
+                                    String url = eventData.get(METADATA_URL).toString();
+                                    url = url.substring(url.lastIndexOf('/') + 1);
 
-								}
+                                    if (url.contains(".")) {
+                                        url = url.substring(0, url.lastIndexOf('.'));
+                                    }
 
-							}
-						}
+                                    eventData.put(METADATA_TITLE, url);
 
-						/**
-						 * Detects Modified Date
-						 */
+                                }
 
-						String date = Arrays.asList(metadata.names()).stream().filter(name -> name.contains("modified")).map(name -> metadata.get(name).trim()).filter(value -> !value.isEmpty()).findFirst().orElse(null);
+                            }
+                        }
 
-						if (date != null) {
-							eventData.put(METADATA_DATE, date);
-						}
+                        /**
+                         * Detects Modified Date
+                         */
 
-						/**
-						 * Detects the language if language is not specified
-						 */
-						if (!eventData.containsKey(METADATA_LANGUAGES)) {
+                        String date = Arrays.asList(metadata.names()).stream().filter(name -> name.contains("modified")).map(name -> metadata.get(name).trim()).filter(value -> !value.isEmpty()).findFirst().orElse(null);
 
-							LanguageResult languageResult = detector.detect(content);
-							if (languageResult.isReasonablyCertain()) {
-								eventData.put(METADATA_LANGUAGES, Arrays.asList(languageResult.getLanguage()));
-							}
-						}
+                        if (date != null) {
+                            eventData.put(METADATA_DATE, date);
+                        }
 
-						/**
-						 * Add Metadata Field
-						 */
+                        /**
+                         * Detects the language if language is not specified
+                         */
+                        if (!eventData.containsKey(METADATA_LANGUAGES)) {
 
-						if (!metadataCustom.isEmpty()) {
-							eventData.put(PROPERTY_METADATA, metadataCustom);
-						}
+                            LanguageResult languageResult = detector.detect(content);
+                            if (languageResult.isReasonablyCertain()) {
+                                eventData.put(METADATA_LANGUAGES, Arrays.asList(languageResult.getLanguage()));
+                            }
+                        }
 
-					} catch (Exception e) {
-						LOGGER.error("Failed to extract PDF", e);
-					}
-				}
+                        /**
+                         * Add Metadata Field
+                         */
 
-				eventData.put(METADATA_CONTENT_TYPE, type);
-			}
+                        if (!metadataCustom.isEmpty()) {
+                            eventData.put(PROPERTY_METADATA, metadataCustom);
+                        }
 
-		});
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to extract PDF", e);
+                    }
+                }
 
-		return events;
+                eventData.put(METADATA_CONTENT_TYPE, type);
+            }
 
-	}
+        });
+
+        return events;
+
+    }
 }
