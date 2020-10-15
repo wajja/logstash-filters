@@ -10,7 +10,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
@@ -28,9 +30,11 @@ import org.apache.tika.Tika;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
+import org.jruby.RubyString;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import org.logstash.ConvertedList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +74,7 @@ public class EuropaPlugin implements Filter {
     private static final String PROPERTY_PROXY_PASS = "proxyPass";
     private static final String PROPERTY_CRAWLER_USER_AGENT = "crawlerUserAgent";
     private static final String PROPERTY_CRAWLER_REFERER = "crawlerReferer";
+    private static final String PROPERTY_DATE_FORMAT = "dateFormat";
 
     private static final String ALLOWED_LANGUAGES = "(be)|(bg)|(bs)|(ca)|(cs)|(cy)|(da)|(de)|(el)|(en)|(es)|(et)|(eu)|(fi)|(fr)|(ga)|(hr)|(hu)|(is)|(it)|(lb)|(lt)|(lv)|(mk)|(mt)|(nl)|(no)|(pl)|(pt)|(ro)|(ru)|(sk)|(sl)|(sq)|(sr)|(sv)|(tr)|(uk)";
     private static final String METADATA_SIMPLIFIED_CONTENT_TYPE = "SIMPLIFIED_CONTENT_TYPE";
@@ -83,12 +88,15 @@ public class EuropaPlugin implements Filter {
     private static final String METADATA_LANGUAGES = "languages";
     private static final String METADATA_TITLE = "TITLE";
 
+    private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSX";
+
     private static final PluginConfigSpec<String> CONFIG_DATA_FOLDER = PluginConfigSpec.stringSetting(PROPERTY_DATA_FOLDER);
-    private static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<String, Object>(), false, false);
-    private static final PluginConfigSpec<Map<String, Object>> CONFIG_SIMPLIFIED_CONTENT_TYPE = PluginConfigSpec.hashSetting(PROPERTY_SIMPLIFIED_CONTENT_TYPE, new HashMap<String, Object>(), false, false);
-    private static final PluginConfigSpec<Map<String, Object>> CONFIG_BEST_BET_URLS = PluginConfigSpec.hashSetting(PROPERTY_BEST_BET_URLS, new HashMap<String, Object>(), false, false);
+    private static final PluginConfigSpec<Map<String, Object>> CONFIG_CUSTOM_METADATA = PluginConfigSpec.hashSetting(PROPERTY_CUSTOM_METADATA, new HashMap<>(), false, false);
+    private static final PluginConfigSpec<Map<String, Object>> CONFIG_SIMPLIFIED_CONTENT_TYPE = PluginConfigSpec.hashSetting(PROPERTY_SIMPLIFIED_CONTENT_TYPE, new HashMap<>(), false, false);
+    private static final PluginConfigSpec<Map<String, Object>> CONFIG_BEST_BET_URLS = PluginConfigSpec.hashSetting(PROPERTY_BEST_BET_URLS, new HashMap<>(), false, false);
     private static final PluginConfigSpec<String> CONFIG_BEST_BET_FIELD = PluginConfigSpec.stringSetting(PROPERTY_BEST_BET_FIELD, METADATA_SITETITLE);
     private static final PluginConfigSpec<String> CONFIG_METADATA_URL = PluginConfigSpec.stringSetting(PROPERTY_METADATA_URL, null, false, false);
+    private static final PluginConfigSpec<String> CONFIG_DATE_FORMAT = PluginConfigSpec.stringSetting(PROPERTY_DATE_FORMAT, null, false, false);
 
     public static final PluginConfigSpec<Long> CONFIG_TIMEOUT = PluginConfigSpec.numSetting(PROPERTY_TIMEOUT, 8000);
     public static final PluginConfigSpec<String> CONFIG_PROXY_HOST = PluginConfigSpec.stringSetting(PROPERTY_PROXY_HOST);
@@ -112,6 +120,7 @@ public class EuropaPlugin implements Filter {
     private Long timeout;
     private String userAgent;
     private String referer;
+    private String dateFormat;
     private ProxyController proxyController;
 
     /**
@@ -139,6 +148,7 @@ public class EuropaPlugin implements Filter {
         this.timeout = config.get(CONFIG_TIMEOUT);
         this.referer = config.get(CONFIG_CRAWLER_REFERER);
         this.userAgent = config.get(CONFIG_CRAWLER_USER_AGENT);
+        this.dateFormat = config.get(CONFIG_DATE_FORMAT);
 
         proxyController = new ProxyController(config.get(CONFIG_PROXY_USER), config.get(CONFIG_PROXY_PASS), config.get(CONFIG_PROXY_HOST), config.get(CONFIG_PROXY_PORT), false);
 
@@ -163,24 +173,25 @@ public class EuropaPlugin implements Filter {
 
             Arrays.asList(pathRestricted.toFile().listFiles()).stream().forEach(file -> {
 
-                try {
+            try {
 
-                    List<String> lines = Files.readLines(file, Charset.defaultCharset());
+                List<String> lines = Files.readLines(file, Charset.defaultCharset());
 
-                    lines.stream().forEach(i -> {
+                lines.stream().forEach(i -> {
 
-                        String collectionName = file.getAbsoluteFile().getName().split("_")[1].replace(".csv", "");
+                String collectionName = file.getAbsoluteFile().getName().split("_")[1].replace(".csv", "");
 
-                        String[] cc = i.split("\\|");
-                        this.mapRestrictedFilters.put(cc[0], collectionName + "::" + cc[1].replace("/", "::"));
-                    });
+                String[] cc = i.split("\\|");
+                this.mapRestrictedFilters.put(cc[0], collectionName + "::" + cc[1].replace("/", "::"));
+                });
 
-                } catch (Exception e) {
-                    LOGGER.error("Failed to read csv", e);
-                }
+            } catch (Exception e) {
+                LOGGER.error("Failed to read csv", e);
+            }
             });
 
         }
+
 
     }
 
@@ -190,7 +201,19 @@ public class EuropaPlugin implements Filter {
     @Override
     public Collection<PluginConfigSpec<?>> configSchema() {
 
-        return Arrays.asList(CONFIG_DATA_FOLDER, CONFIG_CUSTOM_METADATA, CONFIG_SIMPLIFIED_CONTENT_TYPE, CONFIG_BEST_BET_FIELD, CONFIG_BEST_BET_URLS, CONFIG_METADATA_URL, CONFIG_TIMEOUT, CONFIG_PROXY_HOST, CONFIG_PROXY_PORT, CONFIG_PROXY_USER, CONFIG_PROXY_PASS, CONFIG_CRAWLER_USER_AGENT,
+        return Arrays.asList(CONFIG_DATA_FOLDER,
+                CONFIG_CUSTOM_METADATA,
+                CONFIG_SIMPLIFIED_CONTENT_TYPE,
+                CONFIG_BEST_BET_FIELD,
+                CONFIG_BEST_BET_URLS,
+                CONFIG_METADATA_URL,
+                CONFIG_TIMEOUT,
+                CONFIG_PROXY_HOST,
+                CONFIG_PROXY_PORT,
+                CONFIG_PROXY_USER,
+                CONFIG_PROXY_PASS,
+                CONFIG_DATE_FORMAT,
+                CONFIG_CRAWLER_USER_AGENT,
                 CONFIG_CRAWLER_REFERER);
     }
 
@@ -223,7 +246,7 @@ public class EuropaPlugin implements Filter {
                     String contentType = mediaType.getSubtype();
 
                     if (contentType != null && this.simplifiedContentType.containsKey(contentType)) {
-                        eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, (String) simplifiedContentType.get(contentType));
+                        eventData.put(METADATA_SIMPLIFIED_CONTENT_TYPE, simplifiedContentType.get(contentType));
                     } else {
                         LOGGER.info("Could not map simplified content type from url : {}, detected simple : {}", url, contentType);
                     }
@@ -286,7 +309,6 @@ public class EuropaPlugin implements Filter {
                             }
                         }
                     }
-
                     /**
                      * RESTRICTED_FILTER
                      */
@@ -295,7 +317,7 @@ public class EuropaPlugin implements Filter {
 
                     List<String> parentLevelFilters = restrictedFilters.stream().filter(rf -> rf.split("::").length > 2).map(rf -> rf.split("::")[0] + "::" + rf.split("::")[1]).collect(Collectors.toList());
                     if (!parentLevelFilters.isEmpty()) {
-                        restrictedFilters.addAll(parentLevelFilters);
+                    restrictedFilters.addAll(parentLevelFilters);
                     }
                     eventData.put(METADATA_RESTRICTED_FILTER, restrictedFilters.stream().distinct().collect(Collectors.toList()));
 
@@ -311,29 +333,53 @@ public class EuropaPlugin implements Filter {
                     HashSet<String> set = new HashSet<>(ids);
                     set.stream().forEach(s -> {
 
-                        if (this.mapGeneralFiltersTopics.containsKey(s)) {
+                    if (this.mapGeneralFiltersTopics.containsKey(s)) {
 
-                            String[] parts = this.mapGeneralFiltersTopics.get(s).split("/");
-                            if (!generalFilters.contains(parts[0])) {
-                                generalFilters.add(parts[0]);
-                            }
-
-                            if (parts.length > 1) {
-                                generalFilters.add(this.mapGeneralFiltersTopics.get(s).replace("/", "::"));
-                            }
+                        String[] parts = this.mapGeneralFiltersTopics.get(s).split("/");
+                        if (!generalFilters.contains(parts[0])) {
+                        generalFilters.add(parts[0]);
                         }
+
+                        if (parts.length > 1) {
+                        generalFilters.add(this.mapGeneralFiltersTopics.get(s).replace("/", "::"));
+                        }
+                    }
 
                     });
 
                     eventData.put(METADATA_GENERAL_FILTER, generalFilters.stream().distinct().collect(Collectors.toList()));
+
 
                     /**
                      * DATE
                      */
 
                     if (!eventData.containsKey(METADATA_DATE)) {
-                        String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(new Date());
+
+                        String date = new SimpleDateFormat(DATE_FORMAT).format(new Date());
                         eventData.put(METADATA_DATE, Arrays.asList(date));
+
+                    } else if (eventData.containsKey(METADATA_DATE) && dateFormat != null) {
+
+                        List<String> dates = getPropertyList(eventData, METADATA_DATE);
+
+                        dates = dates.stream().map(date -> {
+
+                            try {
+
+                                Date dateObject = new SimpleDateFormat(dateFormat).parse(date);
+                                return new SimpleDateFormat(DATE_FORMAT).format(dateObject);
+
+                            } catch (ParseException e) {
+                                LOGGER.error("Failed to parse date format", e);
+                            }
+
+                            return null;
+
+                        }).collect(Collectors.toList());
+
+                        eventData.put(METADATA_DATE, dates);
+
                     }
 
                     /**
@@ -417,6 +463,31 @@ public class EuropaPlugin implements Filter {
 
     }
 
+    @SuppressWarnings("unchecked")
+    private List<String> getPropertyList(Map<String, Object> eventData, String property) {
+
+        Object object = eventData.get(property);
+
+        if (object instanceof ConvertedList) {
+
+            ConvertedList list = (ConvertedList) object;
+            return list.stream().map(x -> ((RubyString) x).toString()).collect(Collectors.toList());
+
+        } else if (object instanceof List) {
+
+            List list = (List) object;
+
+            if (!list.isEmpty() && list.get(0) instanceof String) {
+                return list;
+            }
+
+        } else if (object != null) {
+            return Arrays.asList(object.toString());
+        }
+
+        return new ArrayList<>();
+    }
+
     private void extractMetadata(Map<String, Object> eventData, HttpURLConnection httpURLConnection, URL fullUrl) {
 
         try (InputStream inputStream = httpURLConnection.getInputStream()) {
@@ -442,7 +513,7 @@ public class EuropaPlugin implements Filter {
                 } else if (attrValue.equals("Docsroom_DocumentDate")) {
 
                     Date date = new Date(Long.getLong(content));
-                    String dateFormatted = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(date);
+                    String dateFormatted = new SimpleDateFormat(DATE_FORMAT).format(date);
                     eventData.put(METADATA_DATE, Arrays.asList(dateFormatted));
                 }
 
@@ -480,12 +551,15 @@ public class EuropaPlugin implements Filter {
 
             File file = Arrays.asList(pathGeneral.toFile().listFiles()).stream().filter(f -> f.getName().equals(name)).findFirst().orElse(null);
 
-            List<String> lines = Files.readLines(file, Charset.defaultCharset());
-            lines.stream().forEach(i -> {
+            if (file != null) {
 
-                String[] cc = i.split("\\|");
-                map.put(cc[0], cc[1]);
-            });
+                List<String> lines = Files.readLines(file, Charset.defaultCharset());
+                lines.stream().forEach(i -> {
+
+                    String[] cc = i.split("\\|");
+                    map.put(cc[0], cc[1]);
+                });
+            }
 
         }
 

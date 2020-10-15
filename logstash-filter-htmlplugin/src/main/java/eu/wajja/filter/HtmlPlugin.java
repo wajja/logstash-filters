@@ -65,8 +65,8 @@ public class HtmlPlugin implements Filter {
 	private static final PluginConfigSpec<List<Object>> CONFIG_EXTRACT_TITLE_CSS = PluginConfigSpec.arraySetting(PROPERTY_EXTRACT_TITLE_CSS, new ArrayList<>(), false, false);
 	private static final PluginConfigSpec<List<Object>> CONFIG_EXTRACT_BODY_CSS = PluginConfigSpec.arraySetting(PROPERTY_EXTRACT_BODY_CSS, new ArrayList<>(), false, false);
 	private static final PluginConfigSpec<List<Object>> CONFIG_EXCLUDE_BODY_CSS = PluginConfigSpec.arraySetting(PROPERTY_EXCLUDE_BODY_CSS, new ArrayList<>(), false, false);
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_MAPPING = PluginConfigSpec.hashSetting(PROPERTY_METADATA_MAPPING, new HashMap<String, Object>(), false, false);
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_CUSTOM = PluginConfigSpec.hashSetting(PROPERTY_METADATA_CUSTOM, new HashMap<String, Object>(), false, false);
+	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_MAPPING = PluginConfigSpec.hashSetting(PROPERTY_METADATA_MAPPING, new HashMap<>(), false, false);
+	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_CUSTOM = PluginConfigSpec.hashSetting(PROPERTY_METADATA_CUSTOM, new HashMap<>(), false, false);
 	private static final PluginConfigSpec<List<Object>> CONFIG_REMOVE_CONTENT = PluginConfigSpec.arraySetting(PROPERTY_REMOVE_CONTENT, new ArrayList<>(), false, false);
 
 	private final Tika tika = new Tika();
