@@ -27,7 +27,6 @@ public class EuropaPluginSimpleTest {
     private static final String REFERENCE = "reference";
     private static final String CONTENT = "content";
     private static final String DATAFOLDER = "dataFolder";
-    private static final String PROPERTY_DATE_FORMAT = "dateFormat";
 
     @SuppressWarnings("unchecked")
     @Test
@@ -69,14 +68,13 @@ public class EuropaPluginSimpleTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void simpleDateFormattingTest() throws IOException {
+    public void filterAdvancedTest() throws IOException {
 
         Map<String, Object> configValues = new HashMap<>();
 
         URL url = this.getClass().getClassLoader().getResource(PDF1);
         File file = new File(url.getPath());
         configValues.put(DATAFOLDER, file.getParent());
-        configValues.put(PROPERTY_DATE_FORMAT, "yyyyddMM");
 
         Configuration config = new ConfigurationImpl(configValues);
 
@@ -89,8 +87,7 @@ public class EuropaPluginSimpleTest {
         Event e = new org.logstash.Event();
         e.setField(REFERENCE, REFERENCE);
         e.setField(CONTENT, encodedContent);
-        e.setField("DATE", "19970506");
-        e.setField("url", "http://test.ec.europa.eu/test");
+        e.setField("url", "https://ec.europa.eu/commission/commissioners/2014-2019/president/level2/president_juncker.html");
 
         Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
         Assert.assertFalse(results.isEmpty());
@@ -100,13 +97,10 @@ public class EuropaPluginSimpleTest {
 
         List<String> filters = (List<String>) data.get("GENERAL_FILTER");
 
-        Assert.assertTrue(filters.size() == 2);
-        Assert.assertTrue(filters.contains("European Commission"));
-        Assert.assertTrue(filters.contains("General Information"));
-        Assert.assertTrue(data.containsKey("DATE"));
+        Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU"));
+        Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU::INFORMATION AND COMMUNICATION OF THE EU"));
 
-        List<String> dates = (List<String>) data.get("DATE");
-        Assert.assertTrue(dates.get(0).startsWith("1997-06-05T00:00:00"));
+        Assert.assertTrue(data.containsKey("DATE"));
 
     }
 
@@ -140,11 +134,12 @@ public class EuropaPluginSimpleTest {
         Map<String, Object> data = eee.getData();
         List<String> filters = (List<String>) data.get("GENERAL_FILTER");
 
-        Assert.assertTrue(filters.size() == 4);
+        Assert.assertTrue(filters.size() == 5);
         Assert.assertTrue(filters.contains("European Commission"));
         Assert.assertTrue(filters.contains("General Information"));
-        Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU/INFORMATION AND COMMUNICATION OF THE EU"));
-        Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU/EU INSTITUTIONS ADMINISTRATION AND STAFF"));
+        Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU"));
+        Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU::INFORMATION AND COMMUNICATION OF THE EU"));
+        Assert.assertTrue(filters.contains("FUNCTIONING OF THE EU::EU INSTITUTIONS ADMINISTRATION AND STAFF"));
         Assert.assertTrue(data.containsKey("DATE"));
 
     }
@@ -180,8 +175,46 @@ public class EuropaPluginSimpleTest {
         List<String> filters = (List<String>) data.get("RESTRICTED_FILTER");
 
         Assert.assertTrue(filters.size() == 2);
-        Assert.assertTrue(filters.contains("GENERAL INFORMATION"));
-        Assert.assertTrue(filters.contains("THE CAP"));
+        Assert.assertTrue(filters.contains("AGRICULTURE::GENERAL INFORMATION"));
+        Assert.assertTrue(filters.contains("AGRICULTURE::THE CAP"));
+        Assert.assertTrue(data.containsKey("DATE"));
+
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void filterRestrictedFilterWithLevelsTest() throws IOException {
+
+        Map<String, Object> configValues = new HashMap<>();
+
+        URL url = this.getClass().getClassLoader().getResource(PDF1);
+        File file = new File(url.getPath());
+        configValues.put(DATAFOLDER, file.getParent());
+
+        Configuration config = new ConfigurationImpl(configValues);
+
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(PDF1);
+        String encodedContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+        inputStream.close();
+
+        Event e = new org.logstash.Event();
+        e.setField(REFERENCE, REFERENCE);
+        e.setField(CONTENT, encodedContent);
+        e.setField("url", "http:////ec.europa.eu/agriculture/testw2filters/some/data/more.htm");
+
+        Collection<co.elastic.logstash.api.Event> results = europaFilter.filter(Collections.singletonList(e), null);
+        Assert.assertFalse(results.isEmpty());
+
+        Event eee = (Event) results.stream().findFirst().orElse(new Event());
+        Map<String, Object> data = eee.getData();
+        List<String> filters = (List<String>) data.get("RESTRICTED_FILTER");
+
+        Assert.assertTrue(filters.size() == 3);
+        Assert.assertTrue(filters.contains("AGRICULTURE::GENERAL INFORMATION"));
+        Assert.assertTrue(filters.contains("AGRICULTURE::FILTER1"));
+        Assert.assertTrue(filters.contains("AGRICULTURE::FILTER1::FILTER2"));
         Assert.assertTrue(data.containsKey("DATE"));
 
     }

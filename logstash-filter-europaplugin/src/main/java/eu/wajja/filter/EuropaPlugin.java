@@ -363,6 +363,7 @@ public class EuropaPlugin implements Filter {
                         }).collect(Collectors.toList());
 
                         eventData.put(METADATA_DATE, dates);
+
                     }
 
                     /**
@@ -535,7 +536,7 @@ public class EuropaPlugin implements Filter {
             File file = Arrays.asList(pathGeneral.toFile().listFiles()).stream().filter(f -> f.getName().equals(name)).findFirst().orElse(null);
 
             if (file != null) {
-               
+
                 List<String> lines = Files.readLines(file, Charset.defaultCharset());
                 lines.stream().forEach(i -> {
 
