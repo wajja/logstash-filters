@@ -492,7 +492,7 @@ public class EuropaPlugin implements Filter {
 
         try (InputStream inputStream = httpURLConnection.getInputStream()) {
 
-            Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
+            Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.US_ACII));
             Elements metadataElements = document.getElementsByTag("meta");
 
             metadataElements.stream().forEach(element -> {
