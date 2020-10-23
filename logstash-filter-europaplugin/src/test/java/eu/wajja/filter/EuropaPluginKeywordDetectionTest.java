@@ -60,6 +60,27 @@ public class EuropaPluginKeywordDetectionTest {
         Assert.assertFalse(keywords.contains(LOCALHOST));
 
     }
+    @SuppressWarnings("unchecked")
+    @Test
+    public void keywordExtractMetaTest() throws IOException {
+
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("metaExample.html");
+        Map<String,Object> metaMap = europaFilter.extractMetaFromStream(inputStream);
+        Assert.assertFalse(metaMap.isEmpty());
+        Assert.assertTrue(metaMap.containsKey(KEYWORDS));
+        List<String> keywords = (List<String>) metaMap.get(KEYWORDS);
+        Assert.assertTrue(keywords.size() == 5);
+        Assert.assertTrue(keywords.contains("steel"));
+        Assert.assertTrue(keywords.contains("iron and steel industry"));
+        Assert.assertTrue(keywords.contains("updating of skills"));
+        Assert.assertFalse(keywords.contains(LOCALHOST));
+        inputStream.close();
+
+    }
 
     @SuppressWarnings("unchecked")
     @Test

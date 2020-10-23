@@ -490,9 +490,23 @@ public class EuropaPlugin implements Filter {
 
     private void extractMetadata(Map<String, Object> eventData, HttpURLConnection httpURLConnection, URL fullUrl) {
 
-        try (InputStream inputStream = httpURLConnection.getInputStream()) {
+        try {
 
-            Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.US_ACII));
+        InputStream inputStream = httpURLConnection.getInputStream();
+        Map<String,Object> metaMap = extractMetaFromStream(inputStream);
+        eventData.putAll(metaMap);
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to read content from url : {}", fullUrl,e);
+        }
+    }
+
+
+    public Map<String,Object> extractMetaFromStream (InputStream inputStream){
+
+        try {
+            Map<String,Object> meta = new HashMap<String,Object>();
+            Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
             Elements metadataElements = document.getElementsByTag("meta");
 
             metadataElements.stream().forEach(element -> {
@@ -502,25 +516,25 @@ public class EuropaPlugin implements Filter {
                 LOGGER.info("metadataElements found {} : {} ", attrValue, content);
 
                 if (attrValue.equals("Docsroom_DocumentTitle")) {
-                    eventData.put(METADATA_TITLE, Arrays.asList(content));
+                    meta.put(METADATA_TITLE, Arrays.asList(content));
 
                 } else if (attrValue.equals("Docsroom_DocumentLanguage")) {
-                    eventData.put(METADATA_LANGUAGES, Arrays.asList(content.toLowerCase()));
+                    meta.put(METADATA_LANGUAGES, Arrays.asList(content.toLowerCase()));
 
                 } else if (attrValue.equals("Docsroom_DocumentKeywords")) {
-                    eventData.put(METADATA_KEYWORDS, content.split(","));
+                    meta.put(METADATA_KEYWORDS, Arrays.asList(content.split(",")));
 
                 } else if (attrValue.equals("Docsroom_DocumentDate")) {
-
-                    Date date = new Date(Long.getLong(content));
+                    Date date = new Date(Long.parseLong(content));
                     String dateFormatted = new SimpleDateFormat(DATE_FORMAT).format(date);
-                    eventData.put(METADATA_DATE, Arrays.asList(dateFormatted));
+                    meta.put(METADATA_DATE, Arrays.asList(dateFormatted));
                 }
 
             });
-
+            return meta;
         } catch (Exception e) {
-            LOGGER.error("Failed to read content from url : {}", fullUrl);
+            LOGGER.error("Failed to parse content from html file : ", e);
+            return null;
         }
     }
 
