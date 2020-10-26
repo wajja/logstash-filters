@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.junit.Assert;
 import org.junit.Test;
 import org.logstash.Event;
@@ -58,6 +60,28 @@ public class EuropaPluginKeywordDetectionTest {
         Assert.assertTrue(keywords.contains(KEYWORDS1));
         Assert.assertTrue(keywords.contains(KEYWORDS2));
         Assert.assertFalse(keywords.contains(LOCALHOST));
+
+    }
+    @SuppressWarnings("unchecked")
+    @Test
+    public void keywordExtractMetaTest() throws IOException {
+
+        Map<String, Object> configValues = new HashMap<>();
+        Configuration config = new ConfigurationImpl(configValues);
+
+        EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("metaExample.html");
+        Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
+        Map<String,Object> metaMap = europaFilter.extractMetaFromHtml(document);
+        Assert.assertFalse(metaMap.isEmpty());
+        Assert.assertTrue(metaMap.containsKey(KEYWORDS));
+        List<String> keywords = (List<String>) metaMap.get(KEYWORDS);
+        Assert.assertTrue(keywords.size() == 5);
+        Assert.assertTrue(keywords.contains("steel"));
+        Assert.assertTrue(keywords.contains("iron and steel industry"));
+        Assert.assertTrue(keywords.contains("updating of skills"));
+        Assert.assertFalse(keywords.contains(LOCALHOST));
+        inputStream.close();
 
     }
 
