@@ -490,9 +490,8 @@ public class EuropaPlugin implements Filter {
 
     private void extractMetadata(Map<String, Object> eventData, HttpURLConnection httpURLConnection, URL fullUrl) {
 
-        try {
+        try (InputStream inputStream = httpURLConnection.getInputStream()){
 
-        InputStream inputStream = httpURLConnection.getInputStream();
         Map<String,Object> metaMap = extractMetaFromStream(inputStream);
         eventData.putAll(metaMap);
 
