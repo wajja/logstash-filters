@@ -492,7 +492,8 @@ public class EuropaPlugin implements Filter {
 
         try (InputStream inputStream = httpURLConnection.getInputStream()){
 
-        Map<String,Object> metaMap = extractMetaFromStream(inputStream);
+        Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
+        Map<String,Object> metaMap = extractMetaFromHtml(document);
         eventData.putAll(metaMap);
 
         } catch (Exception e) {
@@ -501,13 +502,11 @@ public class EuropaPlugin implements Filter {
     }
 
 
-    public Map<String,Object> extractMetaFromStream (InputStream inputStream){
+    protected Map<String,Object> extractMetaFromHtml (Document document){
 
         try {
             Map<String,Object> meta = new HashMap<String,Object>();
-            Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
             Elements metadataElements = document.getElementsByTag("meta");
-
             metadataElements.stream().forEach(element -> {
 
                 String attrValue = element.attr("name");

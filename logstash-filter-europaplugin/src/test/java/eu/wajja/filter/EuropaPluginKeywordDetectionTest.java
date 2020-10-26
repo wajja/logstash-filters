@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.junit.Assert;
 import org.junit.Test;
 import org.logstash.Event;
@@ -69,7 +71,8 @@ public class EuropaPluginKeywordDetectionTest {
 
         EuropaPlugin europaFilter = new EuropaPlugin(UUID.randomUUID().toString(), config, null);
         InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("metaExample.html");
-        Map<String,Object> metaMap = europaFilter.extractMetaFromStream(inputStream);
+        Document document = Jsoup.parse(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
+        Map<String,Object> metaMap = europaFilter.extractMetaFromHtml(document);
         Assert.assertFalse(metaMap.isEmpty());
         Assert.assertTrue(metaMap.containsKey(KEYWORDS));
         List<String> keywords = (List<String>) metaMap.get(KEYWORDS);
