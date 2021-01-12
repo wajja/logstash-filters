@@ -1,0 +1,15 @@
+{
+           "source" => "http://twitter.com/Darakhshansira1/status/1348929292684693504",
+             "user" => "Darakhshansira1",
+       "@timestamp" => 2021-01-12T09:46:19.000Z,
+          "symbols" => [],
+    "user_mentions" => [],
+         "hashtags" => [],
+        "retweeted" => false,
+         "@version" => "1",
+             "urls" => [
+        [0] "https://twitter.com/i/web/status/1348929292684693504"
+    ],
+          "message" => "United Nations: Petition for India to be probed over disinformation campaign &amp; misuse of UN &amp; EU platforms - Sign t? https://t.co/JE5kBJ0Uf6",
+           "client" => "<a href=\"https://mobile.twitter.com\" rel=\"nofollow\">Twitter Web App</a>"
+}
