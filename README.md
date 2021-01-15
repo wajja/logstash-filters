@@ -1,8 +1,6 @@
-# Logstash Fetchers Plugins
+# Logstash Filter Plugins
 
-These tools have been created to crawl applications/sites to fetch data and send them to elastic for searching.
-No processing of the data is done so it can be processed , as is, by the logstash filters.
-
+These tools have been created to manipulate the data that comes from the fetchers
 
 ## Initial configuration
 
