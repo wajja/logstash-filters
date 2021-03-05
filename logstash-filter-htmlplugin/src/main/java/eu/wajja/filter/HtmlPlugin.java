@@ -62,12 +62,18 @@ public class HtmlPlugin implements Filter {
 	/** Remove part of the content **/
 	protected static final String PROPERTY_REMOVE_CONTENT = "removeContent";
 
-	private static final PluginConfigSpec<List<Object>> CONFIG_EXTRACT_TITLE_CSS = PluginConfigSpec.arraySetting(PROPERTY_EXTRACT_TITLE_CSS, new ArrayList<>(), false, false);
-	private static final PluginConfigSpec<List<Object>> CONFIG_EXTRACT_BODY_CSS = PluginConfigSpec.arraySetting(PROPERTY_EXTRACT_BODY_CSS, new ArrayList<>(), false, false);
-	private static final PluginConfigSpec<List<Object>> CONFIG_EXCLUDE_BODY_CSS = PluginConfigSpec.arraySetting(PROPERTY_EXCLUDE_BODY_CSS, new ArrayList<>(), false, false);
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_MAPPING = PluginConfigSpec.hashSetting(PROPERTY_METADATA_MAPPING, new HashMap<>(), false, false);
-	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_CUSTOM = PluginConfigSpec.hashSetting(PROPERTY_METADATA_CUSTOM, new HashMap<>(), false, false);
-	private static final PluginConfigSpec<List<Object>> CONFIG_REMOVE_CONTENT = PluginConfigSpec.arraySetting(PROPERTY_REMOVE_CONTENT, new ArrayList<>(), false, false);
+	private static final PluginConfigSpec<List<Object>> CONFIG_EXTRACT_TITLE_CSS = PluginConfigSpec
+			.arraySetting(PROPERTY_EXTRACT_TITLE_CSS, new ArrayList<>(), false, false);
+	private static final PluginConfigSpec<List<Object>> CONFIG_EXTRACT_BODY_CSS = PluginConfigSpec
+			.arraySetting(PROPERTY_EXTRACT_BODY_CSS, new ArrayList<>(), false, false);
+	private static final PluginConfigSpec<List<Object>> CONFIG_EXCLUDE_BODY_CSS = PluginConfigSpec
+			.arraySetting(PROPERTY_EXCLUDE_BODY_CSS, new ArrayList<>(), false, false);
+	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_MAPPING = PluginConfigSpec
+			.hashSetting(PROPERTY_METADATA_MAPPING, new HashMap<>(), false, false);
+	private static final PluginConfigSpec<Map<String, Object>> CONFIG_METADATA_CUSTOM = PluginConfigSpec
+			.hashSetting(PROPERTY_METADATA_CUSTOM, new HashMap<>(), false, false);
+	private static final PluginConfigSpec<List<Object>> CONFIG_REMOVE_CONTENT = PluginConfigSpec
+			.arraySetting(PROPERTY_REMOVE_CONTENT, new ArrayList<>(), false, false);
 
 	private final Tika tika = new Tika();
 	private LanguageDetector detector;
@@ -92,10 +98,13 @@ public class HtmlPlugin implements Filter {
 		this.threadId = id;
 		this.detector = new OptimaizeLangDetector().loadModels();
 
-		this.titleCss = config.get(CONFIG_EXTRACT_TITLE_CSS).stream().map(Object::toString).collect(Collectors.toList());
+		this.titleCss = config.get(CONFIG_EXTRACT_TITLE_CSS).stream().map(Object::toString)
+				.collect(Collectors.toList());
 		this.bodyCss = config.get(CONFIG_EXTRACT_BODY_CSS).stream().map(Object::toString).collect(Collectors.toList());
-		this.excludeBodyCss = config.get(CONFIG_EXCLUDE_BODY_CSS).stream().map(Object::toString).collect(Collectors.toList());
-		this.removeContent = config.get(CONFIG_REMOVE_CONTENT).stream().map(Object::toString).collect(Collectors.toList());
+		this.excludeBodyCss = config.get(CONFIG_EXCLUDE_BODY_CSS).stream().map(Object::toString)
+				.collect(Collectors.toList());
+		this.removeContent = config.get(CONFIG_REMOVE_CONTENT).stream().map(Object::toString)
+				.collect(Collectors.toList());
 		this.metadataCustom = config.get(CONFIG_METADATA_CUSTOM);
 		this.metadataMapping = config.get(CONFIG_METADATA_MAPPING);
 
@@ -106,7 +115,8 @@ public class HtmlPlugin implements Filter {
 	 */
 	@Override
 	public Collection<PluginConfigSpec<?>> configSchema() {
-		return Arrays.asList(CONFIG_EXTRACT_TITLE_CSS, CONFIG_EXTRACT_BODY_CSS, CONFIG_EXCLUDE_BODY_CSS, CONFIG_REMOVE_CONTENT, CONFIG_METADATA_MAPPING, CONFIG_METADATA_CUSTOM);
+		return Arrays.asList(CONFIG_EXTRACT_TITLE_CSS, CONFIG_EXTRACT_BODY_CSS, CONFIG_EXCLUDE_BODY_CSS,
+				CONFIG_REMOVE_CONTENT, CONFIG_METADATA_MAPPING, CONFIG_METADATA_CUSTOM);
 	}
 
 	@Override
@@ -166,16 +176,15 @@ public class HtmlPlugin implements Filter {
 						Map<String, Object> metadata = new HashMap<>();
 						Map<String, Object> extractedMetadata = new HashMap<>();
 
-						metadataElements.stream()
-								.filter(m -> m.hasAttr("name") && m.hasAttr(METADATA_CONTENT))
-								.forEach(m -> extractedMetadata.put(m.attr("name"), Arrays.asList(m.attr(METADATA_CONTENT))));
+						metadataElements.stream().filter(m -> m.hasAttr("name") && m.hasAttr(METADATA_CONTENT))
+								.forEach(m -> extractedMetadata.put(m.attr("name"), getMetaValues(m)));
 
-						metadataElements.stream()
-								.filter(m -> m.hasAttr("property") && m.hasAttr(METADATA_CONTENT))
-								.forEach(m -> extractedMetadata.put(m.attr("property"), Arrays.asList(m.attr(METADATA_CONTENT))));
+						metadataElements.stream().filter(m -> m.hasAttr("property") && m.hasAttr(METADATA_CONTENT))
+								.forEach(m -> extractedMetadata.put(m.attr("property"), getMetaValues(m)));
 
 						/** Add the custom metadata **/
-						this.metadataCustom.entrySet().stream().forEach(m -> metadata.put(m.getKey(), Arrays.asList((String) m.getValue())));
+						this.metadataCustom.entrySet().stream()
+								.forEach(m -> metadata.put(m.getKey(), Arrays.asList((String) m.getValue())));
 
 						/** Map the custom metadata **/
 						this.metadataMapping.entrySet().stream().forEach(m -> {
@@ -189,7 +198,8 @@ public class HtmlPlugin implements Filter {
 						/** Send metadata to event **/
 						for (Entry<String, Object> entry : metadata.entrySet()) {
 
-							Entry<String, Object> entryTmp = eventData.entrySet().stream().filter(x -> x.getKey().equals(entry.getKey())).findFirst().orElse(null);
+							Entry<String, Object> entryTmp = eventData.entrySet().stream()
+									.filter(x -> x.getKey().equals(entry.getKey())).findFirst().orElse(null);
 
 							if (entryTmp != null && entryTmp.getValue() instanceof List) {
 
@@ -207,8 +217,8 @@ public class HtmlPlugin implements Filter {
 						 * Add HTML meta to the event
 						 */
 
-						extractedMetadata.entrySet().stream()
-								.filter(m -> eventData.entrySet().stream().noneMatch(e -> e.getKey().equals(m.getKey())))
+						extractedMetadata.entrySet().stream().filter(
+								m -> eventData.entrySet().stream().noneMatch(e -> e.getKey().equals(m.getKey())))
 								.forEach(m -> eventData.put(m.getKey(), Arrays.asList(m.getValue())));
 
 						/**
@@ -261,6 +271,17 @@ public class HtmlPlugin implements Filter {
 
 	}
 
+	private List<String> getMetaValues(Element m) {
+
+		String data = m.attr(METADATA_CONTENT);
+
+		if (data.contains(",")) {
+			return Arrays.asList(data.split(",")).stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+		}
+
+		return Arrays.asList(data);
+	}
+
 	private String extractContent(Document document) {
 
 		if (this.bodyCss != null && !this.bodyCss.isEmpty()) {
@@ -281,8 +302,8 @@ public class HtmlPlugin implements Filter {
 					elements.eachText().forEach(t -> stringBuilder.append(t).append(" "));
 				}
 			}
-			
-			if(stringBuilder.toString().isEmpty()) {
+
+			if (stringBuilder.toString().isEmpty()) {
 				return Jsoup.clean(document.text(), Whitelist.simpleText());
 			}
 

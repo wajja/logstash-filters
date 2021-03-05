@@ -104,6 +104,45 @@ public class HtmlPluginTest {
 
 	@SuppressWarnings("unchecked")
 	@Test
+	public void filterHtmlMultiMetadataTest() throws IOException {
+
+		Map<String, Object> configValues = new HashMap<>();
+
+		configValues.put(HtmlPlugin.PROPERTY_METADATA_MAPPING, regexSet1);
+
+		Map<String, Object> map = new HashMap<>();
+		map.put("DATE", "article:published_time");
+		map.put("KEYWORDS", "keywords");
+		configValues.put(HtmlPlugin.PROPERTY_METADATA_MAPPING, map);
+
+		Configuration config = new ConfigurationImpl(configValues);
+		HtmlPlugin htmlFilter = new HtmlPlugin(THREAD_ID, config, null);
+
+		InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("html_page_4.html");
+		String encodedContent = java.util.Base64.getEncoder().encodeToString(IOUtils.toByteArray(inputStream));
+		inputStream.close();
+
+		Event e = new org.logstash.Event();
+		e.setField(HtmlPlugin.METADATA_REFERENCE, HtmlPlugin.METADATA_REFERENCE);
+		e.setField(HtmlPlugin.METADATA_CONTENT, encodedContent);
+		e.setField(HtmlPlugin.METADATA_URL, LOCALHOST);
+
+		Collection<co.elastic.logstash.api.Event> results = htmlFilter.filter(Collections.singletonList(e), null);
+
+		Assert.assertFalse(results.isEmpty());
+		Map<String, Object> data = results.stream().findFirst().orElse(new Event()).getData();
+
+		Assert.assertTrue(data.containsKey("KEYWORDS"));
+
+		List<String> keywords = (List<String>) data.get("KEYWORDS");
+		Assert.assertTrue(keywords.stream().anyMatch(ee -> ee.equals("Belgische commissarissen")));
+		Assert.assertTrue(keywords.stream().anyMatch(ee -> ee.equals("Europese Commissie")));
+
+	}
+
+	
+	@SuppressWarnings("unchecked")
+	@Test
 	public void filterHtmlBasicTest() throws IOException {
 
 		Map<String, Object> configValues = new HashMap<>();
