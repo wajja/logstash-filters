@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.tika.Tika;
@@ -317,22 +318,24 @@ public class HtmlPlugin implements Filter {
 
 		if (this.titleCss != null && !this.titleCss.isEmpty()) {
 
-			StringBuilder stringBuilder = new StringBuilder();
-
 			for (String content : this.titleCss) {
 
 				Elements elements = document.select(content);
 
 				if (!elements.isEmpty()) {
-					elements.eachText().forEach(t -> stringBuilder.append(t).append(" "));
+					
+					String title = elements.eachText().stream()
+						.map(t -> Jsoup.clean(t, Whitelist.simpleText()))
+						.filter(Objects::nonNull)
+						.filter(t -> (!t.isEmpty()))
+						.findFirst().orElse(null);
+					
+					if (title != null && !title.isEmpty()) {
+						return title;
+					}
 				}
 			}
-
-			String title = Jsoup.clean(stringBuilder.toString(), Whitelist.simpleText());
-
-			if (title != null && !title.isEmpty()) {
-				return title;
-			}
+			
 		}
 
 		Elements titleElements = document.getElementsByTag("title");
